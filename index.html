@@ -307,7 +307,7 @@ body.editing .add-inline{display:block}
 
 <div class="ov" id="mSh"><div class="mb">
   <h3>📊 เชื่อมต่อ Google Sheets</h3><p class="mdesc">วาง Apps Script Web App URL</p>
-  <label>URL</label><input id="iSh" placeholder="https://script.google.com/macros/s/AKfycbxs0DdOgRbmIp02PFlP3seS_By-B1vejLZzXUjh3OSNOhnHd9hN9uwaJXTgJle9Cwo3/exec">
+  <label>URL</label><input id="iSh" placeholder="https://script.google.com/macros/s/.../exec">
   <div class="er" id="eSh"></div>
   <div class="mba">
     <button class="bc" onclick="cl('mSh')">ยกเลิก</button>
@@ -366,384 +366,144 @@ body.editing .add-inline{display:block}
 <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
 
 <script>
-const SK='tr_cms_v3';
-let D={},activeTab='',imgTarget=null;
+let D={},IMGS={},activeTab='',imgTarget=null,API='';
 
-// ── FILE INPUT LISTENER — Upload to Drive or fallback Base64 ──
-document.getElementById('fileInput').addEventListener('change', function(e) {
-  const files = Array.from(e.target.files);
-  if (!files.length || !imgTarget) return;
-  const sheetUrl = localStorage.getItem('surl') || '';
-  let processed = 0;
-  const total = files.length;
-  toast('📤 กำลังอัปโหลด ' + total + ' รูป...');
+function getApi(){if(API)return API;const p=new URLSearchParams(location.search).get('api');if(p){API=p}return API||''}
+function imgUrl(id){return IMGS[id]?IMGS[id].url:''}
 
-  files.forEach(file => {
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-      const img = new Image();
-      img.onload = function() {
-        const canvas = document.createElement('canvas');
-        const MAX = 1024;
-        let w = img.width, h = img.height;
-        if (w > MAX) { h = h * (MAX / w); w = MAX; }
-        if (h > MAX) { w = w * (MAX / h); h = MAX; }
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        const b64 = canvas.toDataURL('image/jpeg', 0.75);
-        const fileName = 'report_' + Date.now() + '_' + Math.random().toString(36).slice(2,6) + '.jpg';
-
-        if (sheetUrl) {
-          // Upload to Google Drive via Apps Script
-          uploadToDrive(sheetUrl, b64, fileName).then(url => {
-            imgTarget.cb(url);
-            processed++;
-            if (processed === total) { imgTarget = null; saveLocal(); render(); enableEdit(); forceSync(); toast('📷 อัปโหลดไป Drive ' + total + ' รูป'); }
-          }).catch(err => {
-            // Fallback to base64
-            imgTarget.cb(b64);
-            processed++;
-            if (processed === total) { imgTarget = null; saveLocal(); render(); enableEdit(); toast('📷 เพิ่ม ' + total + ' รูป (เก็บ Base64)'); }
-          });
-        } else {
-          // No Sheets URL — save as base64
-          imgTarget.cb(b64);
-          processed++;
-          if (processed === total) { imgTarget = null; saveLocal(); render(); enableEdit(); toast('📷 เพิ่ม ' + total + ' รูป (Base64)'); }
-        }
-      };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-  e.target.value = '';
-});
-
-async function uploadToDrive(url, base64, fileName) {
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({ action: 'upload_image', base64: base64, fileName: fileName })
-  });
-  const j = await r.json();
-  if (j.status === 'ok' && j.url) return j.url;
-  throw new Error(j.message || 'Upload failed');
+// ══ LOAD / SAVE — Sheets Only ══
+async function loadFromSheet(){
+  const url=getApi();if(!url){showSetup();return}
+  try{showLoading('กำลังโหลดข้อมูล...');
+    const r=await fetch(url);const j=await r.json();
+    if(j.status==='ok'){
+      D={};for(const[k,v]of Object.entries(j.data||{}))D[k]=(typeof v==='string')?JSON.parse(v):v;
+      IMGS=j.images||{};
+      activeTab='';render();
+    }else showSetup(j.message||'โหลดไม่ได้');
+  }catch(e){showSetup(e.message)}
 }
 
-function loadLocal(){try{D=JSON.parse(localStorage.getItem(SK)||'{}')}catch(e){D={}}}
-function saveLocal(){collect();localStorage.setItem(SK,JSON.stringify(D));toast('💾 บันทึกเรียบร้อย');autoSync()}
+async function saveToSheet(){
+  const url=getApi();if(!url){toast('❌ ไม่มี API');return}
+  collect();
+  try{toast('☁️ บันทึก...');
+    const r=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'save_all',data:D})});
+    const j=await r.json();toast(j.status==='ok'?'💾 บันทึกแล้ว':'❌ '+j.message);
+  }catch(e){toast('❌ '+e.message)}
+}
+
+async function uploadImage(base64,blockId){
+  const url=getApi();if(!url)throw new Error('ไม่มี API');
+  const id='img_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+  const fn=id+'.jpg';
+  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'upload_image',base64,fileName:fn,image_id:id,block_id:blockId})});
+  const j=await r.json();
+  if(j.status==='ok'){IMGS[j.image_id]={id:j.image_id,url:j.url};return j.image_id}
+  throw new Error(j.message||'Upload failed');
+}
+
+async function deleteImage(imageId){
+  const url=getApi();if(!url)return;
+  fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'delete_image',image_id:imageId})}).catch(()=>{});
+  delete IMGS[imageId];
+}
+
+// ══ SETUP / LOADING ══
+function showSetup(err){
+  document.getElementById('mainContent').innerHTML=`<div style="max-width:480px;margin:40px auto;text-align:center;padding:20px">
+    <div style="font-size:48px;margin-bottom:16px">📊</div>
+    <h2 style="font-family:'Mitr',sans-serif;color:var(--f);font-size:20px;margin-bottom:8px">เชื่อมต่อ Google Sheets</h2>
+    <p style="color:var(--ts);font-size:13px;margin-bottom:20px">วาง Apps Script URL เพื่อเริ่มใช้งาน</p>
+    ${err?'<p style="color:var(--red);font-size:12px;margin-bottom:12px">'+esc(err)+'</p>':''}
+    <input id="setupUrl" style="width:100%;padding:12px;border:2px solid var(--bd);border-radius:10px;font-size:13px;margin-bottom:12px" placeholder="https://script.google.com/macros/s/.../exec">
+    <button onclick="connectSheet()" style="width:100%;padding:12px;background:var(--f);color:#fff;border:none;border-radius:10px;font-family:'Mitr',sans-serif;font-size:14px;cursor:pointer">เชื่อมต่อ</button>
+    <p style="color:var(--ts);font-size:11px;margin-top:16px">หรือเปิด URL: <code style="background:var(--bl);padding:2px 6px;border-radius:4px;font-size:10px">?api=YOUR_URL</code></p>
+  </div>`;document.getElementById('navBar').innerHTML='';
+}
+function connectSheet(){const u=document.getElementById('setupUrl').value.trim();if(!u)return;API=u;history.replaceState(null,'',location.pathname+'?api='+encodeURIComponent(u));loadFromSheet()}
+function showLoading(m){document.getElementById('mainContent').innerHTML=`<div style="text-align:center;padding:60px"><div style="width:40px;height:40px;border:3px solid var(--bd);border-top-color:var(--fl);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px"></div><p style="color:var(--ts)">${esc(m)}</p></div>`;document.getElementById('navBar').innerHTML=''}
+
+// ══ FILE INPUT ══
+document.getElementById('fileInput').addEventListener('change',function(e){
+  const files=Array.from(e.target.files);if(!files.length||!imgTarget)return;
+  let done=0;const total=files.length;toast('📤 อัปโหลด '+total+' รูป...');
+  files.forEach(file=>{const reader=new FileReader();reader.onload=function(ev){
+    const img=new Image();img.onload=function(){
+      const c=document.createElement('canvas');const M=1024;let w=img.width,h=img.height;
+      if(w>M){h=h*(M/w);w=M}if(h>M){w=w*(M/h);h=M}c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      uploadImage(c.toDataURL('image/jpeg',.75),imgTarget.blockId).then(id=>{
+        imgTarget.cb(id);done++;
+        if(done===total){imgTarget=null;saveToSheet();render();enableEdit();toast('📷 อัปโหลด '+total+' รูปแล้ว')}
+      }).catch(er=>{toast('❌ '+er.message);done++;if(done===total)imgTarget=null});
+    };img.src=ev.target.result;
+  };reader.readAsDataURL(file)});e.target.value='';
+});
+
+// ══ INIT ══
 function secKeys(){return Object.keys(D).filter(k=>k.startsWith('sec_')).sort((a,b)=>parseInt(a.split('_')[1])-parseInt(b.split('_')[1]))}
-
-// ── AUTO SYNC: บันทึกกลับ Sheets อัตโนมัติ (ถ้ามี URL) ──
-let syncTimer=null;
-function autoSync(){
-  const url=localStorage.getItem('surl');
-  if(!url)return;
-  clearTimeout(syncTimer);
-  syncTimer=setTimeout(()=>{
-    fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'save_all',data:D})})
-    .then(r=>r.json()).then(j=>{if(j.status==='ok')console.log('Auto-synced to Sheets')})
-    .catch(e=>console.warn('Auto-sync failed:',e));
-  },2000); // Debounce 2 วินาที
-}
-
-// ── FORCE SYNC: บันทึกทันทีไม่รอ debounce (ใช้หลังอัปรูป) ──
-function forceSync(){
-  const url=localStorage.getItem('surl');
-  if(!url)return;
-  fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'save_all',data:D})})
-  .then(r=>r.json()).then(j=>{if(j.status==='ok')toast('☁️ ซิงค์ข้อมูลแล้ว')})
-  .catch(e=>console.warn('Force sync failed:',e));
-}
-
-// ── INIT: โหลด local ก่อน ถ้ามี surl ให้ดึงจาก Sheets ──
-document.addEventListener('DOMContentLoaded',async ()=>{
-  // Check URL parameter ?api=... (for sharing across devices)
-  const urlParams=new URLSearchParams(window.location.search);
-  const apiParam=urlParams.get('api');
-  if(apiParam) localStorage.setItem('surl',apiParam);
-
-  loadLocal();
-  if(!D.settings) loadSample();
-  render();
-
-  // Auto-pull from Sheets on load
-  const url=localStorage.getItem('surl');
-  if(url){
-    try{
-      toast('☁️ กำลังโหลดข้อมูล...');
-      const r=await fetch(url);
-      const j=await r.json();
-      if(j.status==='ok'&&j.data){
-        D={};
-        for(const[k,v]of Object.entries(j.data)) D[k]=typeof v==='string'?JSON.parse(v):v;
-        localStorage.setItem(SK,JSON.stringify(D));
-        activeTab='';
-        render();
-        toast('☁️ โหลดข้อมูลล่าสุดแล้ว');
-      }
-    }catch(e){console.warn('Auto-pull failed:',e)}
-  }
-});
-
-function loadSample(){
-  D={settings:{title:'รายงานผลการปฏิบัติงาน',subtitle:'เพื่อประกอบการพิจารณาเลื่อนเงินเดือน ข้าราชการครูและบุคลากรทางการศึกษา สายงานการสอน',password:'1234',school:'โรงเรียนบ้านคลอง 14',period:'ครั้งที่ 1 (1 ตุลาคม 2568 – 31 มีนาคม 2569)',position:'ครู (ยังไม่มีวิทยฐานะ)'},
-  sec_1:{tab:'ข้อมูลส่วนตัว',icon:'👤',blocks:[
-    {id:'p1',type:'info-grid',title:'ข้อมูลทั่วไป',data:{'ชื่อ-สกุล':'นายจิรพิพัฒน์ พะสุรัมย์','อายุ':'18 ปี','ตำแหน่ง':'ครู (ยังไม่มีวิทยฐานะ)','สถานศึกษา':'โรงเรียนบ้านคลอง 14','สังกัด':'สพป.นครนายก','อัตราเงินเดือน':'0 บาท','เริ่มรับราชการ':'25 เมษายน 2565','ปฏิบัติราชการ':'3 ปี'}},
-    {id:'p2',type:'images-only',title:'รูปประจำตัว / ภาพกิจกรรม',images:[]},
-  ]},
-  sec_2:{tab:'องค์ประกอบที่ 1',icon:'✅',heading:'ประสิทธิภาพและประสิทธิผลการปฏิบัติงานตามมาตรฐานตำแหน่ง',blocks:[
-    {id:'c11',type:'text-images',title:'1.1 สร้างและ/หรือพัฒนาหลักสูตร',content:'',sub:'',images:[]},
-    {id:'c12',type:'text-images',title:'1.2 การออกแบบการจัดการเรียนรู้',content:'',sub:'',images:[]},
-    {id:'c13',type:'text-images',title:'1.3 การจัดกิจกรรมการเรียนรู้',content:'',sub:'',images:[]},
-    {id:'c14',type:'text-images',title:'1.4 สร้างและ/หรือพัฒนาสื่อ นวัตกรรม เทคโนโลยี',content:'',sub:'',images:[]},
-    {id:'c15',type:'text-images',title:'1.5 วัดและประเมินผลการเรียนรู้',content:'',sub:'',images:[]},
-    {id:'c16',type:'text-images',title:'1.6 ศึกษา วิเคราะห์ สังเคราะห์ เพื่อแก้ปัญหา',content:'',sub:'',images:[]},
-    {id:'c17',type:'text-images',title:'1.7 จัดบรรยากาศที่ส่งเสริมและพัฒนาผู้เรียน',content:'',sub:'',images:[]},
-    {id:'c18',type:'text-images',title:'1.8 อบรมและพัฒนาคุณลักษณะที่ดีของผู้เรียน',content:'',sub:'',images:[]},
-  ]},
-  sec_3:{tab:'องค์ประกอบที่ 2',icon:'🤝',heading:'การมีส่วนร่วมในการพัฒนาการศึกษา',blocks:[
-    {id:'c21',type:'text-images',title:'2.1 จัดทำข้อมูลสารสนเทศของผู้เรียนและรายวิชา',content:'',sub:'',images:[]},
-    {id:'c22',type:'text-images',title:'2.2 ดำเนินการตามระบบดูแลช่วยเหลือผู้เรียน',content:'',sub:'',images:[]},
-    {id:'c23',type:'text-images',title:'2.3 ปฏิบัติงานวิชาการและงานอื่นๆ ของสถานศึกษา',content:'',sub:'',images:[]},
-    {id:'c24',type:'text-images',title:'2.4 ประสานความร่วมมือกับผู้ปกครอง ภาคีเครือข่าย',content:'',sub:'',images:[]},
-  ]},
-  sec_4:{tab:'องค์ประกอบที่ 3',icon:'🛡️',heading:'วินัย คุณธรรม จริยธรรม จรรยาบรรณวิชาชีพ',blocks:[
-    {id:'e1',type:'checklist',title:'การปฏิบัติตน 10 ข้อ',items:[
-      {label:'ยึดมั่นในสถาบันหลักของประเทศ',desc:''},
-      {label:'ซื่อสัตย์ สุจริต มีจิตสำนึกที่ดี',desc:''},
-      {label:'กล้าคิด กล้าตัดสินใจ กระทำในสิ่งที่ถูกต้อง',desc:''},
-      {label:'จิตอาสา จิตสาธารณะ มุ่งประโยชน์ส่วนรวม',desc:''},
-      {label:'มุ่งผลสัมฤทธิ์ของงาน',desc:''},
-      {label:'ปฏิบัติหน้าที่อย่างเป็นธรรม ไม่เลือกปฏิบัติ',desc:''},
-      {label:'ดำรงตนเป็นแบบอย่างที่ดี',desc:''},
-      {label:'เคารพศักดิ์ศรีความเป็นมนุษย์ คำนึงถึงสิทธิเด็ก',desc:''},
-      {label:'ยึดถือจรรยาบรรณวิชาชีพ',desc:''},
-      {label:'มีวินัยและรักษาวินัย',desc:''},
-    ]},
-  ]},
-  sec_5:{tab:'ประเด็นท้าทาย',icon:'⭐',heading:'ระดับความสำเร็จในการพัฒนางานที่เสนอเป็นประเด็นท้าทาย',blocks:[
-    {id:'ch1',type:'header',title:'ข้อตกลงในการพัฒนางาน',content:''},
-    {id:'ch2',type:'text-images',title:'วิธีดำเนินการ',content:'',sub:'',images:[]},
-    {id:'ch3',type:'text-only',title:'ผลลัพธ์เชิงปริมาณ',content:'',sub:''},
-    {id:'ch4',type:'text-only',title:'ผลลัพธ์เชิงคุณภาพ',content:'',sub:''},
-  ]}};
-  localStorage.setItem(SK,JSON.stringify(D));
-}
+document.addEventListener('DOMContentLoaded',()=>loadFromSheet());
 
 // ══ RENDER ══
 function render(){renderHero();renderNav();renderSections();if(activeTab&&document.getElementById('tab-'+activeTab))switchTab(activeTab);else{const k=secKeys();if(k.length)switchTab(k[0])}}
-
-function renderHero(){
-  const s=D.settings||{};
-  document.getElementById('heroTitle').textContent=s.title||'รายงานผลการปฏิบัติงาน';
-  document.getElementById('heroSub').textContent=s.subtitle||'';
-  let c='';
-  if(s.position)c+=`<div class="ch">👤 ${esc(s.position)}</div>`;
-  if(s.period)c+=`<div class="ch">📅 ${esc(s.period)}</div>`;
-  if(s.school)c+=`<div class="ch">🏫 ${esc(s.school)}</div>`;
-  document.getElementById('heroChips').innerHTML=c;
-}
-
-function renderNav(){
-  const keys=secKeys();let h='';
-  const isEdit=document.body.classList.contains('editing');
-  keys.forEach((k,i)=>{
-    const sec=D[k],cls=k===activeTab?' active':'';
-    let arrows='';
-    if(isEdit){
-      arrows=`<div class="tab-arrows">${i>0?`<button class="tab-arr" onclick="event.stopPropagation();moveTab('${k}',-1)">◀</button>`:''}<button class="tab-arr" onclick="event.stopPropagation();moveTab('${k}',1)">▶</button><button class="tab-arr tab-del" onclick="event.stopPropagation();delTab('${k}')">✕</button></div>`;
-    }
-    h+=`<button class="nt${cls}" onclick="switchTab('${k}')">${sec.icon||'📄'} ${esc(sec.tab||k)}${arrows}</button>`;
-  });
-  document.getElementById('navBar').innerHTML=h;
-}
-
-function renderSections(){
-  const keys=secKeys();let h='';
-  keys.forEach(k=>{
-    const sec=D[k],cls=k===activeTab?' active':'';
-    h+=`<div class="tp${cls}" id="tab-${k}"><div class="stt"><div class="sti">${sec.icon||'📄'}</div><div><h2>${esc(sec.tab||'')}</h2>${sec.heading?`<p>${esc(sec.heading)}</p>`:''}</div></div>`;
-    if(sec.blocks)sec.blocks.forEach((b,i)=>{h+=renderBlock(k,b,i)});
-    h+=`<div class="add-block-area"><button class="add-block-btn" onclick="openAddBlock('${k}')">➕ เพิ่ม Block ใหม่</button></div></div>`;
-  });
-  document.getElementById('mainContent').innerHTML=h;
-}
+function renderHero(){const s=D.settings||{};document.getElementById('heroTitle').textContent=s.title||'รายงานผลการปฏิบัติงาน';document.getElementById('heroSub').textContent=s.subtitle||'';let c='';if(s.position)c+=`<div class="ch">👤 ${esc(s.position)}</div>`;if(s.period)c+=`<div class="ch">📅 ${esc(s.period)}</div>`;if(s.school)c+=`<div class="ch">🏫 ${esc(s.school)}</div>`;document.getElementById('heroChips').innerHTML=c}
+function renderNav(){const keys=secKeys();let h='';const ed=document.body.classList.contains('editing');keys.forEach((k,i)=>{const sec=D[k],cls=k===activeTab?' active':'';let arr='';if(ed)arr=`<div class="tab-arrows">${i>0?`<button class="tab-arr" onclick="event.stopPropagation();moveTab('${k}',-1)">◀</button>`:''}<button class="tab-arr" onclick="event.stopPropagation();moveTab('${k}',1)">▶</button><button class="tab-arr tab-del" onclick="event.stopPropagation();delTab('${k}')">✕</button></div>`;h+=`<button class="nt${cls}" onclick="switchTab('${k}')">${sec.icon||'📄'} ${esc(sec.tab||k)}${arr}</button>`});document.getElementById('navBar').innerHTML=h}
+function renderSections(){const keys=secKeys();let h='';keys.forEach(k=>{const sec=D[k],cls=k===activeTab?' active':'';h+=`<div class="tp${cls}" id="tab-${k}"><div class="stt"><div class="sti">${sec.icon||'📄'}</div><div><h2>${esc(sec.tab||'')}</h2>${sec.heading?`<p>${esc(sec.heading)}</p>`:''}</div></div>`;if(sec.blocks)sec.blocks.forEach((b,i)=>{h+=renderBlock(k,b,i)});h+=`<div class="add-block-area"><button class="add-block-btn" onclick="openAddBlock('${k}')">➕ เพิ่ม Block</button></div></div>`});document.getElementById('mainContent').innerHTML=h}
 
 function renderBlock(sk,b,idx){
-  const t=b.type||'text-only';
+  const t=b.type||'text-only',ed=document.body.classList.contains('editing');
   const eb=`<div class="cba">${idx>0?`<button onclick="moveBlock('${sk}',${idx},-1)">▲</button>`:''}<button onclick="moveBlock('${sk}',${idx},1)">▼</button><button class="del-btn" onclick="delBlock('${sk}',${idx})">✕</button></div>`;
-
-  if(t==='header') return `<div class="bk-header"><h3>${esc(b.title||'')}</h3><p class="ed" data-s="${sk}" data-i="${idx}" data-f="content" data-ph="เนื้อหา...">${esc(b.content||'')}</p>${eb}</div>`;
-
+  if(t==='header')return`<div class="bk-header"><h3>${esc(b.title||'')}</h3><p class="ed" data-s="${sk}" data-i="${idx}" data-f="content" data-ph="เนื้อหา...">${esc(b.content||'')}</p>${eb}</div>`;
   let inner='';
-
-  if(t==='info-grid'){
-    inner='<div class="ig">';
-    Object.entries(b.data||{}).forEach(([k,v])=>{inner+=`<div class="ic"><div class="fl">${esc(k)}</div><div class="iv ed" data-s="${sk}" data-i="${idx}" data-f="data.${k}" data-ph="...">${esc(v)}</div></div>`});
-    inner+='</div><div class="add-inline"><button class="add-inline-btn" onclick="addInfoField(\''+sk+'\','+idx+')">+ เพิ่มช่อง</button></div>';
-  }
-  if(t==='text-only'||t==='text-images'){
-    inner+=`<div class="fl">📝 เนื้อหา</div><div class="ed" data-s="${sk}" data-i="${idx}" data-f="content" data-ph="พิมพ์เนื้อหา...">${esc(b.content||'')}</div>`;
-    inner+=`<div class="rb"><div class="fl">⭐ ผลลัพธ์</div><div class="ed" data-s="${sk}" data-i="${idx}" data-f="sub" data-ph="ผลลัพธ์...">${esc(b.sub||'')}</div></div>`;
-  }
-
-  // ── IMAGE SECTION ──
+  if(t==='info-grid'){inner='<div class="ig">';Object.entries(b.data||{}).forEach(([k,v])=>{inner+=`<div class="ic"><div class="fl">${esc(k)}</div><div class="iv ed" data-s="${sk}" data-i="${idx}" data-f="data.${k}" data-ph="...">${esc(v)}</div></div>`});inner+='</div><div class="add-inline"><button class="add-inline-btn" onclick="addInfoField(\''+sk+'\','+idx+')">+ เพิ่มช่อง</button></div>'}
+  if(t==='text-only'||t==='text-images'){inner+=`<div class="fl">📝 เนื้อหา</div><div class="ed" data-s="${sk}" data-i="${idx}" data-f="content" data-ph="เนื้อหา...">${esc(b.content||'')}</div><div class="rb"><div class="fl">⭐ ผลลัพธ์</div><div class="ed" data-s="${sk}" data-i="${idx}" data-f="sub" data-ph="ผลลัพธ์...">${esc(b.sub||'')}</div></div>`}
+  // ── IMAGES: ใช้ image_id lookup จาก IMGS ──
   if(t==='text-images'||t==='images-only'){
-    const imgs=(b.images||[]).filter(s=>s);
-    const isEdit=document.body.classList.contains('editing');
-    // Only show image section if has images OR editing
-    if(imgs.length||isEdit){
-      if(isEdit) inner+='<div class="fl" style="margin-top:14px">🖼️ ภาพประกอบ</div>';
+    const ids=(b.images||[]).filter(id=>id&&imgUrl(id));
+    if(ids.length||ed){
+      if(ed)inner+='<div class="fl" style="margin-top:14px">🖼️ ภาพประกอบ</div>';
       inner+='<div class="img-grid">';
-      imgs.forEach((src,ii)=>{
-        inner+=`<div class="img-slot has-img">
-          <img src="${src}" onclick="openLB('${sk}',${idx},${ii})">
-          <div class="img-overlay" onclick="triggerUpload('${sk}',${idx})"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>เปลี่ยนรูป</div>
-          <button class="img-x" onclick="event.stopPropagation();delImg('${sk}',${idx},${ii})">✕</button>
-        </div>`;
-      });
-      // Upload slot — ONLY in edit mode
-      if(isEdit){
-        inner+=`<div class="img-slot img-slot-upload" onclick="triggerUpload('${sk}',${idx})"
-          ondragover="event.preventDefault();this.classList.add('dragover')"
-          ondragleave="this.classList.remove('dragover')"
-          ondrop="handleDrop(event,'${sk}',${idx})">
-          <div class="img-ph">
-            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
-            คลิกหรือลากรูปมาวาง
-          </div>
-        </div>`;
-      }
+      ids.forEach((id,ii)=>{const url=imgUrl(id);if(url)inner+=`<div class="img-slot has-img"><img src="${esc(url)}" onclick="openLB('${sk}',${idx},${ii})"><button class="img-x" onclick="event.stopPropagation();delImg('${sk}',${idx},${ii})">✕</button></div>`});
+      if(ed)inner+=`<div class="img-slot img-slot-upload" onclick="triggerUpload('${sk}',${idx})" ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handleDrop(event,'${sk}',${idx})"><div class="img-ph"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>คลิกหรือลากรูปมาวาง</div></div>`;
       inner+='</div>';
     }
   }
-
-  if(t==='checklist'){
-    (b.items||[]).forEach((it,ii)=>{inner+=`<div class="cli"><div class="clh"><div class="cln">${ii+1}</div><div class="clt ed" data-s="${sk}" data-i="${idx}" data-f="items.${ii}.label" data-ph="หัวข้อ...">${esc(it.label||'')}</div></div><div class="cld ed" data-s="${sk}" data-i="${idx}" data-f="items.${ii}.desc" data-ph="รายละเอียด...">${esc(it.desc||'')}</div></div>`});
-    inner+=`<div class="add-inline"><button class="add-inline-btn" onclick="addCheckItem('${sk}',${idx})">+ เพิ่มรายการ</button></div>`;
-  }
-
-  return `<div class="card"><div class="ct"><div class="cn">${tIcon(t)}</div><h3 class="ed" data-s="${sk}" data-i="${idx}" data-f="title" data-ph="หัวข้อ...">${esc(b.title||'')}</h3>${eb}</div><div class="cbody">${inner}</div></div>`;
+  if(t==='checklist'){(b.items||[]).forEach((it,ii)=>{inner+=`<div class="cli"><div class="clh"><div class="cln">${ii+1}</div><div class="clt ed" data-s="${sk}" data-i="${idx}" data-f="items.${ii}.label" data-ph="หัวข้อ...">${esc(it.label||'')}</div></div><div class="cld ed" data-s="${sk}" data-i="${idx}" data-f="items.${ii}.desc" data-ph="รายละเอียด...">${esc(it.desc||'')}</div></div>`});inner+=`<div class="add-inline"><button class="add-inline-btn" onclick="addCheckItem('${sk}',${idx})">+ เพิ่มรายการ</button></div>`}
+  return`<div class="card"><div class="ct"><div class="cn">${tIcon(t)}</div><h3 class="ed" data-s="${sk}" data-i="${idx}" data-f="title" data-ph="หัวข้อ...">${esc(b.title||'')}</h3>${eb}</div><div class="cbody">${inner}</div></div>`;
 }
 function tIcon(t){return{'text-only':'📝','text-images':'🖼️','images-only':'🖼️','info-grid':'📊','header':'📌','checklist':'✅'}[t]||'📄'}
 
-// ══ IMAGE FUNCTIONS ══
-function triggerUpload(sk, bi) {
-  if (!document.body.classList.contains('editing')) return;
-  collect();
-  imgTarget = {
-    cb: function(urlOrB64) {
-      if (!D[sk].blocks[bi].images) D[sk].blocks[bi].images = [];
-      D[sk].blocks[bi].images.push(urlOrB64);
-    }
-  };
-  document.getElementById('fileInput').click();
-}
+// ══ IMAGE ══
+function triggerUpload(sk,bi){if(!document.body.classList.contains('editing'))return;collect();const blockId=D[sk].blocks[bi].id||'';imgTarget={blockId,cb:id=>{if(!D[sk].blocks[bi].images)D[sk].blocks[bi].images=[];D[sk].blocks[bi].images.push(id)}};document.getElementById('fileInput').click()}
+function handleDrop(e,sk,bi){e.preventDefault();e.currentTarget.classList.remove('dragover');if(!document.body.classList.contains('editing'))return;const files=Array.from(e.dataTransfer.files).filter(f=>f.type.startsWith('image/'));if(!files.length)return;collect();const blockId=D[sk].blocks[bi].id||'';let done=0;toast('📤 อัปโหลด...');files.forEach(file=>{const reader=new FileReader();reader.onload=ev=>{const img=new Image();img.onload=function(){const c=document.createElement('canvas');const M=1024;let w=img.width,h=img.height;if(w>M){h=h*(M/w);w=M}if(h>M){w=w*(M/h);h=M}c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);if(!D[sk].blocks[bi].images)D[sk].blocks[bi].images=[];uploadImage(c.toDataURL('image/jpeg',.75),blockId).then(id=>{D[sk].blocks[bi].images.push(id);done++;if(done===files.length){saveToSheet();render();enableEdit();toast('📷 เพิ่ม '+files.length+' รูป')}}).catch(()=>{done++;if(done===files.length)toast('❌ อัปโหลดไม่สำเร็จ')})};img.src=ev.target.result};reader.readAsDataURL(file)})}
+function delImg(sk,bi,ii){if(!confirm('ลบรูปนี้?'))return;collect();const id=D[sk].blocks[bi].images[ii];D[sk].blocks[bi].images.splice(ii,1);deleteImage(id);saveToSheet();render();enableEdit()}
+function openLB(sk,bi,ii){const ids=D[sk]?.blocks?.[bi]?.images||[];const url=imgUrl(ids[ii]);if(!url)return;document.getElementById('lboxImg').src=url;document.getElementById('lboxInfo').textContent='รูปที่ '+(ii+1)+' / '+ids.length;document.getElementById('lbox').classList.add('show')}
+function closeLB(e){if(e.target===e.currentTarget||e.target.tagName!=='IMG')document.getElementById('lbox').classList.remove('show')}
 
-function handleDrop(e, sk, bi) {
-  e.preventDefault();
-  e.currentTarget.classList.remove('dragover');
-  if (!document.body.classList.contains('editing')) return;
-  const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-  if (!files.length) return;
-  collect();
-  const sheetUrl = localStorage.getItem('surl') || '';
-  let done = 0;
-  toast('📤 กำลังอัปโหลด ' + files.length + ' รูป...');
-  files.forEach(file => {
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-      const img = new Image();
-      img.onload = function() {
-        const canvas = document.createElement('canvas');
-        const MAX = 1024;
-        let w = img.width, h = img.height;
-        if (w > MAX) { h = h*(MAX/w); w = MAX; }
-        if (h > MAX) { w = w*(MAX/h); h = MAX; }
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        const b64 = canvas.toDataURL('image/jpeg', .75);
-        const fileName = 'report_' + Date.now() + '_' + Math.random().toString(36).slice(2,6) + '.jpg';
-        if (!D[sk].blocks[bi].images) D[sk].blocks[bi].images = [];
-
-        const finish = () => { done++; if (done === files.length) { saveLocal(); render(); enableEdit(); forceSync(); toast('📷 เพิ่ม '+files.length+' รูป'); } };
-
-        if (sheetUrl) {
-          uploadToDrive(sheetUrl, b64, fileName).then(url => { D[sk].blocks[bi].images.push(url); finish(); }).catch(() => { D[sk].blocks[bi].images.push(b64); finish(); });
-        } else {
-          D[sk].blocks[bi].images.push(b64); finish();
-        }
-      };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-function delImg(sk, bi, ii) {
-  if (!confirm('ลบรูปนี้?')) return;
-  collect();
-  D[sk].blocks[bi].images.splice(ii, 1);
-  saveLocal(); render(); enableEdit();
-}
-
-function openLB(sk, bi, ii) {
-  const imgs = D[sk]?.blocks?.[bi]?.images || [];
-  if (!imgs[ii]) return;
-  document.getElementById('lboxImg').src = imgs[ii];
-  document.getElementById('lboxInfo').textContent = 'รูปที่ ' + (ii+1) + ' / ' + imgs.length;
-  document.getElementById('lbox').classList.add('show');
-}
-function closeLB(e) { if (e.target === e.currentTarget || e.target.tagName !== 'IMG') document.getElementById('lbox').classList.remove('show'); }
-
-// ══ TAB ══
+// ══ TAB / EDIT ══
 function switchTab(k){if(document.body.classList.contains('editing'))collect();activeTab=k;renderNav();renderSections();const t=document.getElementById('tab-'+k);if(t)t.classList.add('active');if(document.body.classList.contains('editing'))enableEdit()}
-
-function moveTab(k,dir){collect();const keys=secKeys();const idx=keys.indexOf(k);const ni=idx+dir;if(ni<0||ni>=keys.length)return;const nA=parseInt(keys[idx].split('_')[1]),nB=parseInt(keys[ni].split('_')[1]);const dA=D[keys[idx]],dB=D[keys[ni]];D['sec_'+nA]=dB;D['sec_'+nB]=dA;localStorage.setItem(SK,JSON.stringify(D));activeTab='sec_'+nB;render();enableEdit();toast('↔️ ย้าย Tab แล้ว')}
-function delTab(k){if(!confirm('ลบ Tab "'+((D[k]||{}).tab||k)+'"?'))return;collect();delete D[k];localStorage.setItem(SK,JSON.stringify(D));const keys=secKeys();activeTab=keys[0]||'';render();if(document.body.classList.contains('editing'))enableEdit();toast('🗑️ ลบ Tab แล้ว')}
-
-// ══ COLLECT ══
-function collect(){document.querySelectorAll('.ed[data-s]').forEach(el=>{const sk=el.dataset.s,bi=parseInt(el.dataset.i),f=el.dataset.f,v=el.textContent.trim();if(!D[sk]||!D[sk].blocks||!D[sk].blocks[bi])return;const b=D[sk].blocks[bi];if(f.startsWith('data.')){if(!b.data)b.data={};b.data[f.slice(5)]=v}else if(f.startsWith('items.')){const p=f.split('.');if(b.items&&b.items[parseInt(p[1])])b.items[parseInt(p[1])][p[2]]=v}else b[f]=v})}
-
-// ══ EDIT ══
-function chkPw(){if(document.getElementById('iPw').value===(D.settings||{}).password||'1234'){cl('mPw');document.body.classList.add('editing');render();enableEdit();toast('🔓 เข้าสู่โหมดแก้ไข')}else{document.getElementById('ePw').textContent='รหัสผ่านไม่ถูกต้อง';document.getElementById('iPw').value=''}}
+function moveTab(k,dir){collect();const keys=secKeys(),idx=keys.indexOf(k),ni=idx+dir;if(ni<0||ni>=keys.length)return;const nA=parseInt(keys[idx].split('_')[1]),nB=parseInt(keys[ni].split('_')[1]);const a=D[keys[idx]],b=D[keys[ni]];D['sec_'+nA]=b;D['sec_'+nB]=a;activeTab='sec_'+nB;saveToSheet();render();enableEdit()}
+function delTab(k){if(!confirm('ลบ Tab?'))return;collect();delete D[k];activeTab=secKeys()[0]||'';saveToSheet();render();if(document.body.classList.contains('editing'))enableEdit()}
+function collect(){document.querySelectorAll('.ed[data-s]').forEach(el=>{const sk=el.dataset.s,bi=parseInt(el.dataset.i),f=el.dataset.f,v=el.textContent.trim();if(!D[sk]?.blocks?.[bi])return;const b=D[sk].blocks[bi];if(f.startsWith('data.')){if(!b.data)b.data={};b.data[f.slice(5)]=v}else if(f.startsWith('items.')){const p=f.split('.');if(b.items?.[parseInt(p[1])])b.items[parseInt(p[1])][p[2]]=v}else b[f]=v})}
+function chkPw(){if(document.getElementById('iPw').value===(D.settings||{}).password||'1234'){cl('mPw');document.body.classList.add('editing');render();enableEdit();toast('🔓 โหมดแก้ไข')}else{document.getElementById('ePw').textContent='รหัสผ่านไม่ถูกต้อง';document.getElementById('iPw').value=''}}
 function enableEdit(){document.querySelectorAll('.ed').forEach(el=>el.contentEditable='true')}
-function exitEdit(){collect();saveLocal();document.body.classList.remove('editing');document.querySelectorAll('.ed').forEach(el=>el.contentEditable='false');render()}
-
-function moveBlock(sk,i,dir){collect();const bl=D[sk].blocks,ni=i+dir;if(ni<0||ni>=bl.length)return;[bl[i],bl[ni]]=[bl[ni],bl[i]];saveLocal();render();enableEdit()}
-function delBlock(sk,i){if(!confirm('ลบ block นี้?'))return;collect();D[sk].blocks.splice(i,1);saveLocal();render();enableEdit()}
+function exitEdit(){collect();saveToSheet();document.body.classList.remove('editing');render()}
+function moveBlock(sk,i,dir){collect();const bl=D[sk].blocks,ni=i+dir;if(ni<0||ni>=bl.length)return;[bl[i],bl[ni]]=[bl[ni],bl[i]];saveToSheet();render();enableEdit()}
+function delBlock(sk,i){if(!confirm('ลบ?'))return;collect();D[sk].blocks.splice(i,1);saveToSheet();render();enableEdit()}
 let addBlockTarget='';
 function openAddBlock(sk){addBlockTarget=sk;document.getElementById('abTitle').value='';op('mAb')}
-function confirmAddBlock(){const type=document.getElementById('abType').value,title=document.getElementById('abTitle').value.trim()||'หัวข้อใหม่';collect();if(!D[addBlockTarget].blocks)D[addBlockTarget].blocks=[];const nb={id:'b'+Date.now(),type,title};if(type==='text-only'||type==='text-images'){nb.content='';nb.sub=''}if(type==='text-images'||type==='images-only')nb.images=[];if(type==='info-grid')nb.data={'หัวข้อ':''};if(type==='checklist')nb.items=[{label:'',desc:''}];if(type==='header')nb.content='';D[addBlockTarget].blocks.push(nb);cl('mAb');saveLocal();render();enableEdit()}
-function addInfoField(sk,bi){const n=prompt('ชื่อช่อง:');if(!n)return;collect();if(!D[sk].blocks[bi].data)D[sk].blocks[bi].data={};D[sk].blocks[bi].data[n]='';saveLocal();render();enableEdit()}
-function addCheckItem(sk,bi){collect();if(!D[sk].blocks[bi].items)D[sk].blocks[bi].items=[];D[sk].blocks[bi].items.push({label:'',desc:''});saveLocal();render();enableEdit()}
-function confirmAddSection(){const tab=document.getElementById('asTab').value.trim()||'หน้าใหม่',icon=document.getElementById('asIcon').value.trim()||'📄',heading=document.getElementById('asHead').value.trim();collect();const mx=secKeys().reduce((m,k)=>Math.max(m,parseInt(k.split('_')[1])||0),0);const nk='sec_'+(mx+1);D[nk]={tab,icon,heading,blocks:[]};cl('mAs');saveLocal();activeTab=nk;render();enableEdit();toast('📂 เพิ่ม "'+tab+'"')}
-
+function confirmAddBlock(){const type=document.getElementById('abType').value,title=document.getElementById('abTitle').value.trim()||'หัวข้อใหม่';collect();if(!D[addBlockTarget].blocks)D[addBlockTarget].blocks=[];const nb={id:'b'+Date.now(),type,title};if(type==='text-only'||type==='text-images'){nb.content='';nb.sub=''}if(type==='text-images'||type==='images-only')nb.images=[];if(type==='info-grid')nb.data={'หัวข้อ':''};if(type==='checklist')nb.items=[{label:'',desc:''}];if(type==='header')nb.content='';D[addBlockTarget].blocks.push(nb);cl('mAb');saveToSheet();render();enableEdit()}
+function addInfoField(sk,bi){const n=prompt('ชื่อช่อง:');if(!n)return;collect();if(!D[sk].blocks[bi].data)D[sk].blocks[bi].data={};D[sk].blocks[bi].data[n]='';saveToSheet();render();enableEdit()}
+function addCheckItem(sk,bi){collect();D[sk].blocks[bi].items.push({label:'',desc:''});saveToSheet();render();enableEdit()}
+function confirmAddSection(){const tab=document.getElementById('asTab').value.trim()||'หน้าใหม่',icon=document.getElementById('asIcon').value.trim()||'📄',heading=document.getElementById('asHead').value.trim();collect();const mx=secKeys().reduce((m,k)=>Math.max(m,parseInt(k.split('_')[1])||0),0);D['sec_'+(mx+1)]={tab,icon,heading,blocks:[]};cl('mAs');activeTab='sec_'+(mx+1);saveToSheet();render();enableEdit();toast('📂 เพิ่ม "'+tab+'"')}
 function openSettings(){const s=D.settings||{};document.getElementById('sTitle').value=s.title||'';document.getElementById('sSub').value=s.subtitle||'';document.getElementById('sSchool').value=s.school||'';document.getElementById('sPos').value=s.position||'';document.getElementById('sPeriod').value=s.period||'';document.getElementById('sNewPw').value='';op('mSt')}
-function saveSettings(){if(!D.settings)D.settings={};D.settings.title=document.getElementById('sTitle').value;D.settings.subtitle=document.getElementById('sSub').value;D.settings.school=document.getElementById('sSchool').value;D.settings.position=document.getElementById('sPos').value;D.settings.period=document.getElementById('sPeriod').value;const np=document.getElementById('sNewPw').value;if(np)D.settings.password=np;cl('mSt');saveLocal();renderHero();toast('⚙️ บันทึกตั้งค่าแล้ว')}
-
-// ══ SHEETS ══
-function updateShareLink(){
-  const url=localStorage.getItem('surl');
-  const linkInput=document.getElementById('shareLink');
-  if(url&&linkInput){
-    const base=window.location.origin+window.location.pathname;
-    linkInput.value=base+'?api='+encodeURIComponent(url);
-  }
-}
-function copyShareLink(){
-  const linkInput=document.getElementById('shareLink');
-  if(!linkInput.value){toast('❌ ยังไม่ได้เชื่อมต่อ Sheets');return}
-  navigator.clipboard.writeText(linkInput.value).then(()=>toast('📋 คัดลอก Link แล้ว — ส่งไปเปิดบนมือถือได้เลย')).catch(()=>{linkInput.select();document.execCommand('copy');toast('📋 คัดลอก Link แล้ว')});
-}
-
-async function pullSheet(){const url=document.getElementById('iSh').value.trim();if(!url){document.getElementById('eSh').textContent='กรุณาวาง URL';return}localStorage.setItem('surl',url);updateShareLink();try{document.getElementById('eSh').textContent='กำลังโหลด...';const r=await fetch(url);const j=await r.json();if(j.status==='ok'&&j.data){D={};for(const[k,v]of Object.entries(j.data))D[k]=typeof v==='string'?JSON.parse(v):v;localStorage.setItem(SK,JSON.stringify(D));cl('mSh');activeTab='';render();if(document.body.classList.contains('editing'))enableEdit();toast('📊 ดึงข้อมูลสำเร็จ!')}else document.getElementById('eSh').textContent=j.message||'อ่านไม่ได้'}catch(e){document.getElementById('eSh').textContent='ผิดพลาด: '+e.message}}
-async function pushSheet(){const url=document.getElementById('iSh').value.trim()||localStorage.getItem('surl')||'';if(!url){document.getElementById('eSh').textContent='กรุณาวาง URL';return}localStorage.setItem('surl',url);collect();try{document.getElementById('eSh').textContent='กำลังบันทึก...';const r=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'save_all',data:D})});const j=await r.json();if(j.status==='ok'){cl('mSh');toast('📊 บันทึกกลับ Sheets สำเร็จ!')}else document.getElementById('eSh').textContent=j.message||'ผิดพลาด'}catch(e){document.getElementById('eSh').textContent='ผิดพลาด: '+e.message}}
-
+function saveSettings(){if(!D.settings)D.settings={};D.settings.title=document.getElementById('sTitle').value;D.settings.subtitle=document.getElementById('sSub').value;D.settings.school=document.getElementById('sSchool').value;D.settings.position=document.getElementById('sPos').value;D.settings.period=document.getElementById('sPeriod').value;const np=document.getElementById('sNewPw').value;if(np)D.settings.password=np;cl('mSt');saveToSheet();renderHero();toast('⚙️ บันทึกแล้ว')}
+async function pullSheet(){const url=document.getElementById('iSh').value.trim();if(!url){document.getElementById('eSh').textContent='กรุณาวาง URL';return}API=url;history.replaceState(null,'',location.pathname+'?api='+encodeURIComponent(url));cl('mSh');loadFromSheet()}
+async function pushSheet(){collect();const url=getApi();if(!url)return;try{document.getElementById('eSh').textContent='บันทึก...';await saveToSheet();cl('mSh')}catch(e){document.getElementById('eSh').textContent=e.message}}
 function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
-function op(id){document.getElementById(id).classList.add('show');if(id==='mPw'){const p=document.getElementById('iPw');p.value='';document.getElementById('ePw').textContent='';setTimeout(()=>p.focus(),200)}if(id==='mSh'){const sv=localStorage.getItem('surl')||'';document.getElementById('iSh').value=sv;document.getElementById('eSh').textContent='';updateShareLink()}}
+function op(id){document.getElementById(id).classList.add('show');if(id==='mPw'){document.getElementById('iPw').value='';document.getElementById('ePw').textContent='';setTimeout(()=>document.getElementById('iPw').focus(),200)}if(id==='mSh'){document.getElementById('iSh').value=getApi();document.getElementById('eSh').textContent=''}}
 function cl(id){document.getElementById(id).classList.remove('show')}
 </script>
 </body>
