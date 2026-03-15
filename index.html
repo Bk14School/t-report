@@ -126,16 +126,19 @@ body.editing .cba{display:flex}
 .img-slot img:hover{transform:scale(1.03)}
 .img-ph{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--ts);font-size:12px;font-weight:300;padding:16px;text-align:center}
 .img-ph svg{width:36px;height:36px;stroke:var(--mu);stroke-width:1.5;fill:none}
-/* Upload overlay — shows on hover in edit mode */
+/* Upload overlay — shows on hover in edit mode on existing images */
 .img-overlay{position:absolute;inset:0;background:rgba(20,83,45,.85);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-family:'Mitr',sans-serif;font-size:13px;font-weight:300;opacity:0;transition:var(--e);pointer-events:none;border-radius:var(--rs);backdrop-filter:blur(4px)}
 .img-overlay svg{width:32px;height:32px;stroke:#fff;stroke-width:1.5;fill:none}
-body.editing .img-slot:hover .img-overlay{opacity:1;pointer-events:auto;cursor:pointer}
-/* Delete button */
+body.editing .has-img:hover .img-overlay{opacity:1;pointer-events:auto;cursor:pointer}
+/* Delete button — edit mode only on images that exist */
 .img-x{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;background:rgba(220,38,38,.9);color:#fff;border:2px solid #fff;cursor:pointer;font-size:14px;display:none;align-items:center;justify-content:center;transition:var(--e);box-shadow:0 2px 8px rgba(0,0,0,.3);z-index:5}
 .img-x:hover{transform:scale(1.15);background:#dc2626}
-body.editing .img-slot.has-img .img-x{display:flex}
+body.editing .has-img .img-x{display:flex}
+/* Upload placeholder slot — styled as dashed box, cursor pointer */
+.img-slot-upload{border:2px dashed var(--fl);background:var(--fg);cursor:pointer!important}
+.img-slot-upload:hover{background:var(--fp);border-color:var(--f)}
 /* Drop zone highlight */
-.img-slot.dragover{border-color:var(--fl);border-style:solid;background:var(--fg)}
+.img-slot.dragover{border-color:var(--fl)!important;border-style:solid!important;background:var(--fg)!important}
 .img-slot.dragover .img-ph{color:var(--f)}
 .img-slot.dragover .img-ph svg{stroke:var(--fl)}
 
@@ -396,21 +399,46 @@ function secKeys(){return Object.keys(D).filter(k=>k.startsWith('sec_')).sort((a
 document.addEventListener('DOMContentLoaded',()=>{loadLocal();if(!D.settings)loadSample();render()});
 
 function loadSample(){
-  D={settings:{title:'รายงานผลการปฏิบัติงาน',subtitle:'เพื่อประกอบการพิจารณาเลื่อนเงินเดือน ข้าราชการครูและบุคลากรทางการศึกษา สายงานการสอน',password:'1234',school:'โรงเรียนคลังสื่อวิชาการ',period:'ครั้งที่ 1 (1 ตุลาคม 2568 – 31 มีนาคม 2569)',position:'ครู วิทยฐานะ ครูชำนาญการ'},
+  D={settings:{title:'รายงานผลการปฏิบัติงาน',subtitle:'เพื่อประกอบการพิจารณาเลื่อนเงินเดือน ข้าราชการครูและบุคลากรทางการศึกษา สายงานการสอน',password:'1234',school:'โรงเรียนบ้านคลอง 14',period:'ครั้งที่ 1 (1 ตุลาคม 2568 – 31 มีนาคม 2569)',position:'ครู (ยังไม่มีวิทยฐานะ)'},
   sec_1:{tab:'ข้อมูลส่วนตัว',icon:'👤',blocks:[
-    {id:'p1',type:'info-grid',title:'ข้อมูลทั่วไป',data:{'ชื่อ-สกุล':'นายคลังสื่อวิชาการ งานคุณครู','อายุ':'30 ปี','ตำแหน่ง':'ครู วิทยฐานะ ครูชำนาญการ','สังกัด':'สพป. เขต 2','อัตราเงินเดือน':'24,750 บาท','เริ่มรับราชการ':'1 พ.ย. 2565'}},
+    {id:'p1',type:'info-grid',title:'ข้อมูลทั่วไป',data:{'ชื่อ-สกุล':'นายจิรพิพัฒน์ พะสุรัมย์','อายุ':'18 ปี','ตำแหน่ง':'ครู (ยังไม่มีวิทยฐานะ)','สถานศึกษา':'โรงเรียนบ้านคลอง 14','สังกัด':'สพป.นครนายก','อัตราเงินเดือน':'0 บาท','เริ่มรับราชการ':'25 เมษายน 2565','ปฏิบัติราชการ':'3 ปี'}},
     {id:'p2',type:'images-only',title:'รูปประจำตัว / ภาพกิจกรรม',images:[]},
   ]},
-  sec_2:{tab:'องค์ประกอบที่ 1',icon:'✅',heading:'ประสิทธิภาพและประสิทธิผลการปฏิบัติงาน',blocks:[
-    {id:'c11',type:'text-images',title:'1.1 สร้างและ/หรือพัฒนาหลักสูตร',content:'จัดทำรายวิชาและหน่วยการเรียนรู้ให้สอดคล้องกับมาตรฐานการเรียนรู้และตัวชี้วัด',sub:'ผู้เรียนมากกว่าร้อยละ 80 ผ่านเกณฑ์',images:[]},
-    {id:'c12',type:'text-only',title:'1.2 การออกแบบการจัดการเรียนรู้',content:'ออกแบบตามแนวทาง Active Learning',sub:'ผู้เรียนมากกว่าร้อยละ 80 มีทักษะในศตวรรษที่ 21'},
+  sec_2:{tab:'องค์ประกอบที่ 1',icon:'✅',heading:'ประสิทธิภาพและประสิทธิผลการปฏิบัติงานตามมาตรฐานตำแหน่ง',blocks:[
+    {id:'c11',type:'text-images',title:'1.1 สร้างและ/หรือพัฒนาหลักสูตร',content:'',sub:'',images:[]},
+    {id:'c12',type:'text-images',title:'1.2 การออกแบบการจัดการเรียนรู้',content:'',sub:'',images:[]},
+    {id:'c13',type:'text-images',title:'1.3 การจัดกิจกรรมการเรียนรู้',content:'',sub:'',images:[]},
+    {id:'c14',type:'text-images',title:'1.4 สร้างและ/หรือพัฒนาสื่อ นวัตกรรม เทคโนโลยี',content:'',sub:'',images:[]},
+    {id:'c15',type:'text-images',title:'1.5 วัดและประเมินผลการเรียนรู้',content:'',sub:'',images:[]},
+    {id:'c16',type:'text-images',title:'1.6 ศึกษา วิเคราะห์ สังเคราะห์ เพื่อแก้ปัญหา',content:'',sub:'',images:[]},
+    {id:'c17',type:'text-images',title:'1.7 จัดบรรยากาศที่ส่งเสริมและพัฒนาผู้เรียน',content:'',sub:'',images:[]},
+    {id:'c18',type:'text-images',title:'1.8 อบรมและพัฒนาคุณลักษณะที่ดีของผู้เรียน',content:'',sub:'',images:[]},
   ]},
-  sec_3:{tab:'องค์ประกอบที่ 3',icon:'🛡️',heading:'วินัย คุณธรรม จริยธรรม',blocks:[
-    {id:'e1',type:'checklist',title:'การปฏิบัติตน',items:[{label:'ยึดมั่นในสถาบันหลัก',desc:'ส่งเสริม สนับสนุนและพิทักษ์รักษา'},{label:'ซื่อสัตย์ สุจริต',desc:'ปฏิบัติหน้าที่ด้วยความซื่อสัตย์'}]},
+  sec_3:{tab:'องค์ประกอบที่ 2',icon:'🤝',heading:'การมีส่วนร่วมในการพัฒนาการศึกษา',blocks:[
+    {id:'c21',type:'text-images',title:'2.1 จัดทำข้อมูลสารสนเทศของผู้เรียนและรายวิชา',content:'',sub:'',images:[]},
+    {id:'c22',type:'text-images',title:'2.2 ดำเนินการตามระบบดูแลช่วยเหลือผู้เรียน',content:'',sub:'',images:[]},
+    {id:'c23',type:'text-images',title:'2.3 ปฏิบัติงานวิชาการและงานอื่นๆ ของสถานศึกษา',content:'',sub:'',images:[]},
+    {id:'c24',type:'text-images',title:'2.4 ประสานความร่วมมือกับผู้ปกครอง ภาคีเครือข่าย',content:'',sub:'',images:[]},
   ]},
-  sec_4:{tab:'ประเด็นท้าทาย',icon:'⭐',heading:'การพัฒนาผลลัพธ์การเรียนรู้',blocks:[
-    {id:'ch1',type:'header',title:'ข้อตกลงในการพัฒนางาน',content:'การพัฒนาทักษะการอ่านจับใจความสำคัญ'},
-    {id:'ch2',type:'text-images',title:'วิธีดำเนินการและผลลัพธ์',content:'ศึกษาวิเคราะห์หลักสูตร → จัดทำแผน → นำบทเรียนสำเร็จรูปมาใช้',sub:'ร้อยละ 80 ผ่านเกณฑ์ทุกตัวชี้วัด',images:[]},
+  sec_4:{tab:'องค์ประกอบที่ 3',icon:'🛡️',heading:'วินัย คุณธรรม จริยธรรม จรรยาบรรณวิชาชีพ',blocks:[
+    {id:'e1',type:'checklist',title:'การปฏิบัติตน 10 ข้อ',items:[
+      {label:'ยึดมั่นในสถาบันหลักของประเทศ',desc:''},
+      {label:'ซื่อสัตย์ สุจริต มีจิตสำนึกที่ดี',desc:''},
+      {label:'กล้าคิด กล้าตัดสินใจ กระทำในสิ่งที่ถูกต้อง',desc:''},
+      {label:'จิตอาสา จิตสาธารณะ มุ่งประโยชน์ส่วนรวม',desc:''},
+      {label:'มุ่งผลสัมฤทธิ์ของงาน',desc:''},
+      {label:'ปฏิบัติหน้าที่อย่างเป็นธรรม ไม่เลือกปฏิบัติ',desc:''},
+      {label:'ดำรงตนเป็นแบบอย่างที่ดี',desc:''},
+      {label:'เคารพศักดิ์ศรีความเป็นมนุษย์ คำนึงถึงสิทธิเด็ก',desc:''},
+      {label:'ยึดถือจรรยาบรรณวิชาชีพ',desc:''},
+      {label:'มีวินัยและรักษาวินัย',desc:''},
+    ]},
+  ]},
+  sec_5:{tab:'ประเด็นท้าทาย',icon:'⭐',heading:'ระดับความสำเร็จในการพัฒนางานที่เสนอเป็นประเด็นท้าทาย',blocks:[
+    {id:'ch1',type:'header',title:'ข้อตกลงในการพัฒนางาน',content:''},
+    {id:'ch2',type:'text-images',title:'วิธีดำเนินการ',content:'',sub:'',images:[]},
+    {id:'ch3',type:'text-only',title:'ผลลัพธ์เชิงปริมาณ',content:'',sub:''},
+    {id:'ch4',type:'text-only',title:'ผลลัพธ์เชิงคุณภาพ',content:'',sub:''},
   ]}};
   localStorage.setItem(SK,JSON.stringify(D));
 }
@@ -431,9 +459,13 @@ function renderHero(){
 
 function renderNav(){
   const keys=secKeys();let h='';
+  const isEdit=document.body.classList.contains('editing');
   keys.forEach((k,i)=>{
     const sec=D[k],cls=k===activeTab?' active':'';
-    const arrows=`<div class="tab-arrows">${i>0?`<button class="tab-arr" onclick="event.stopPropagation();moveTab('${k}',-1)">◀</button>`:''}<button class="tab-arr" onclick="event.stopPropagation();moveTab('${k}',1)">▶</button><button class="tab-arr tab-del" onclick="event.stopPropagation();delTab('${k}')">✕</button></div>`;
+    let arrows='';
+    if(isEdit){
+      arrows=`<div class="tab-arrows">${i>0?`<button class="tab-arr" onclick="event.stopPropagation();moveTab('${k}',-1)">◀</button>`:''}<button class="tab-arr" onclick="event.stopPropagation();moveTab('${k}',1)">▶</button><button class="tab-arr tab-del" onclick="event.stopPropagation();delTab('${k}')">✕</button></div>`;
+    }
     h+=`<button class="nt${cls}" onclick="switchTab('${k}')">${sec.icon||'📄'} ${esc(sec.tab||k)}${arrows}</button>`;
   });
   document.getElementById('navBar').innerHTML=h;
@@ -470,28 +502,33 @@ function renderBlock(sk,b,idx){
 
   // ── IMAGE SECTION ──
   if(t==='text-images'||t==='images-only'){
-    const imgs=b.images||[];
-    inner+='<div class="fl" style="margin-top:14px">🖼️ ภาพประกอบ</div><div class="img-grid">';
-    imgs.forEach((src,ii)=>{
-      if(src){
+    const imgs=(b.images||[]).filter(s=>s);
+    const isEdit=document.body.classList.contains('editing');
+    // Only show image section if has images OR editing
+    if(imgs.length||isEdit){
+      if(isEdit) inner+='<div class="fl" style="margin-top:14px">🖼️ ภาพประกอบ</div>';
+      inner+='<div class="img-grid">';
+      imgs.forEach((src,ii)=>{
         inner+=`<div class="img-slot has-img">
           <img src="${src}" onclick="openLB('${sk}',${idx},${ii})">
           <div class="img-overlay" onclick="triggerUpload('${sk}',${idx})"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>เปลี่ยนรูป</div>
           <button class="img-x" onclick="event.stopPropagation();delImg('${sk}',${idx},${ii})">✕</button>
         </div>`;
+      });
+      // Upload slot — ONLY in edit mode
+      if(isEdit){
+        inner+=`<div class="img-slot img-slot-upload" onclick="triggerUpload('${sk}',${idx})"
+          ondragover="event.preventDefault();this.classList.add('dragover')"
+          ondragleave="this.classList.remove('dragover')"
+          ondrop="handleDrop(event,'${sk}',${idx})">
+          <div class="img-ph">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+            คลิกหรือลากรูปมาวาง
+          </div>
+        </div>`;
       }
-    });
-    // Upload slot (always visible)
-    inner+=`<div class="img-slot" onclick="triggerUpload('${sk}',${idx})"
-      ondragover="event.preventDefault();this.classList.add('dragover')"
-      ondragleave="this.classList.remove('dragover')"
-      ondrop="handleDrop(event,'${sk}',${idx})">
-      <div class="img-ph">
-        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
-        คลิกหรือลากรูปมาวาง
-      </div>
-      <div class="img-overlay"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>อัปโหลดรูปภาพ</div>
-    </div></div>`;
+      inner+='</div>';
+    }
   }
 
   if(t==='checklist'){
@@ -564,7 +601,7 @@ function openLB(sk, bi, ii) {
 function closeLB(e) { if (e.target === e.currentTarget || e.target.tagName !== 'IMG') document.getElementById('lbox').classList.remove('show'); }
 
 // ══ TAB ══
-function switchTab(k){if(document.body.classList.contains('editing'))collect();activeTab=k;document.querySelectorAll('.tp').forEach(p=>p.classList.remove('active'));const t=document.getElementById('tab-'+k);if(t)t.classList.add('active');renderNav();if(document.body.classList.contains('editing'))enableEdit()}
+function switchTab(k){if(document.body.classList.contains('editing'))collect();activeTab=k;renderNav();renderSections();const t=document.getElementById('tab-'+k);if(t)t.classList.add('active');if(document.body.classList.contains('editing'))enableEdit()}
 
 function moveTab(k,dir){collect();const keys=secKeys();const idx=keys.indexOf(k);const ni=idx+dir;if(ni<0||ni>=keys.length)return;const nA=parseInt(keys[idx].split('_')[1]),nB=parseInt(keys[ni].split('_')[1]);const dA=D[keys[idx]],dB=D[keys[ni]];D['sec_'+nA]=dB;D['sec_'+nB]=dA;localStorage.setItem(SK,JSON.stringify(D));activeTab='sec_'+nB;render();enableEdit();toast('↔️ ย้าย Tab แล้ว')}
 function delTab(k){if(!confirm('ลบ Tab "'+((D[k]||{}).tab||k)+'"?'))return;collect();delete D[k];localStorage.setItem(SK,JSON.stringify(D));const keys=secKeys();activeTab=keys[0]||'';render();if(document.body.classList.contains('editing'))enableEdit();toast('🗑️ ลบ Tab แล้ว')}
@@ -573,7 +610,7 @@ function delTab(k){if(!confirm('ลบ Tab "'+((D[k]||{}).tab||k)+'"?'))return;c
 function collect(){document.querySelectorAll('.ed[data-s]').forEach(el=>{const sk=el.dataset.s,bi=parseInt(el.dataset.i),f=el.dataset.f,v=el.textContent.trim();if(!D[sk]||!D[sk].blocks||!D[sk].blocks[bi])return;const b=D[sk].blocks[bi];if(f.startsWith('data.')){if(!b.data)b.data={};b.data[f.slice(5)]=v}else if(f.startsWith('items.')){const p=f.split('.');if(b.items&&b.items[parseInt(p[1])])b.items[parseInt(p[1])][p[2]]=v}else b[f]=v})}
 
 // ══ EDIT ══
-function chkPw(){if(document.getElementById('iPw').value===(D.settings||{}).password||'1234'){cl('mPw');document.body.classList.add('editing');enableEdit();toast('🔓 เข้าสู่โหมดแก้ไข')}else{document.getElementById('ePw').textContent='รหัสผ่านไม่ถูกต้อง';document.getElementById('iPw').value=''}}
+function chkPw(){if(document.getElementById('iPw').value===(D.settings||{}).password||'1234'){cl('mPw');document.body.classList.add('editing');render();enableEdit();toast('🔓 เข้าสู่โหมดแก้ไข')}else{document.getElementById('ePw').textContent='รหัสผ่านไม่ถูกต้อง';document.getElementById('iPw').value=''}}
 function enableEdit(){document.querySelectorAll('.ed').forEach(el=>el.contentEditable='true')}
 function exitEdit(){collect();saveLocal();document.body.classList.remove('editing');document.querySelectorAll('.ed').forEach(el=>el.contentEditable='false');render()}
 
