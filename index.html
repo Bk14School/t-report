@@ -1012,22 +1012,7 @@ function delBlock(sk, i) {
   collect(); D[sk].blocks.splice(i, 1); saveLocal(false); render(); enableEdit(); toast('🗑️ ลบแล้ว');
 }
 
-let addBlockTarget = '';
-function openAddBlock(sk) {
-  addBlockTarget = sk; document.getElementById('abTitle').value = ''; document.getElementById('abType').value = 'text-only'; op('mAb');
-}
-function confirmAddBlock() {
-  const type = document.getElementById('abType').value; const title = document.getElementById('abTitle').value.trim() || 'หัวข้อใหม่';
-  collect();
-  if (!D[addBlockTarget].blocks) D[addBlockTarget].blocks =[];
-  const nb = { id: 'b' + Date.now(), type, title };
-  if (type.includes('text')) { nb.content = ''; nb.sub = ''; }
-  if (type.includes('images')) nb.images =[];
-  if (type === 'info-grid') nb.data = { 'หัวข้อ': '' };
-  if (type === 'checklist') nb.items = [{ label: '', desc: '' }];
-  D[addBlockTarget].blocks.push(nb);
-  cl('mAb'); saveLocal(false); render(); enableEdit(); toast('➕ เพิ่มเนื้อหาแล้ว');
-}
+
 function addInfoField(sk, bi) {
   const n = prompt('ระบุชื่อช่องข้อมูลใหม่:'); if (!n) return;
   collect(); if (!D[sk].blocks[bi].data) D[sk].blocks[bi].data = {};
@@ -1045,7 +1030,71 @@ function confirmAddSection() {
   const nk = 'sec_' + (secKeys().length + 1); D[nk] = { tab, icon, heading, blocks:[] };
   cl('mAs'); activeTab = nk; saveLocal(false); render(); enableEdit(); toast(`📂 สร้างหน้า ${tab} สำเร็จ`);
 }
+let addBlockTarget = '';
 
+function openAddBlock(sk) {
+  // ตรวจสอบว่า sk (ชื่อหน้า) มีอยู่ในข้อมูล D จริงหรือไม่
+  if (!D[sk]) {
+    toast('⚠️ ไม่พบข้อมูลหน้านี้ในระบบ กรุณารีเฟรชหน้าจอ');
+    return;
+  }
+  addBlockTarget = sk; 
+  document.getElementById('abTitle').value = ''; 
+  document.getElementById('abType').value = 'text-only'; 
+  op('mAb');
+}
+
+function confirmAddBlock() {
+  const type = document.getElementById('abType').value; 
+  const title = document.getElementById('abTitle').value.trim() || 'หัวข้อใหม่';
+  
+  // 1. เก็บข้อมูลจากช่องแก้ไขเดิมก่อน
+  collect();
+
+  // 2. ตรวจสอบความปลอดภัย: ป้องกันกรณีหาหน้าที่จะเพิ่มไม่เจอ
+  if (!addBlockTarget || !D[addBlockTarget]) {
+    toast('⚠️ เกิดข้อผิดพลาด: หาหน้าปัจจุบันไม่เจอ');
+    cl('mAb');
+    return;
+  }
+
+  // 3. ตรวจสอบว่าข้อมูลในหน้านั้นเป็น Object หรือไม่ (ป้องกันกรณีข้อมูลเสีย)
+  if (typeof D[addBlockTarget] !== 'object') {
+    D[addBlockTarget] = { tab: addBlockTarget, blocks: [] };
+  }
+
+  // 4. ตรวจสอบและสร้าง Array สำหรับเก็บ Blocks ถ้ายังไม่มี
+  if (!Array.isArray(D[addBlockTarget].blocks)) {
+    D[addBlockTarget].blocks = [];
+  }
+
+  // 5. สร้างข้อมูล Block ใหม่
+  const nb = { id: 'b' + Date.now(), type, title };
+  
+  if (type.includes('text')) { 
+    nb.content = ''; 
+    nb.sub = ''; 
+  }
+  if (type.includes('images')) {
+    nb.images = [];
+  }
+  if (type === 'info-grid') {
+    nb.data = { 'หัวข้อ': '' };
+  }
+  if (type === 'checklist') {
+    nb.items = [{ label: '', desc: '' }];
+  }
+
+  // 6. เพิ่มข้อมูลลงในรายการ (จุดที่เคยเกิด Error จะหายไปเพราะเราเช็ค Array แล้วในข้อ 4)
+  D[addBlockTarget].blocks.push(nb);
+
+  // 7. บิดหน้าต่าง ปล่อยบันทึก และแสดงผลใหม่
+  cl('mAb'); 
+  saveLocal(false); 
+  render(); 
+  enableEdit(); 
+  toast('➕ เพิ่มเนื้อหาเรียบร้อยแล้ว');
+}
 // =========================
 // Edit Mode & PIN
 // =========================
