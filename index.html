@@ -357,11 +357,15 @@ body.editing .add-inline{display:block}
 const SK='tr_cms_v3';
 let D={},activeTab='',imgTarget=null;
 
-// ── FILE INPUT LISTENER ──
+// ── FILE INPUT LISTENER — Upload to Drive or fallback Base64 ──
 document.getElementById('fileInput').addEventListener('change', function(e) {
   const files = Array.from(e.target.files);
   if (!files.length || !imgTarget) return;
+  const sheetUrl = localStorage.getItem('surl') || '';
   let processed = 0;
+  const total = files.length;
+  toast('📤 กำลังอัปโหลด ' + total + ' รูป...');
+
   files.forEach(file => {
     const reader = new FileReader();
     reader.onload = function(ev) {
@@ -375,14 +379,25 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
         const b64 = canvas.toDataURL('image/jpeg', 0.75);
-        imgTarget.cb(b64);
-        processed++;
-        if (processed === files.length) {
-          imgTarget = null;
-          saveLocal();
-          render();
-          enableEdit();
-          toast('📷 เพิ่ม ' + files.length + ' รูปแล้ว');
+        const fileName = 'report_' + Date.now() + '_' + Math.random().toString(36).slice(2,6) + '.jpg';
+
+        if (sheetUrl) {
+          // Upload to Google Drive via Apps Script
+          uploadToDrive(sheetUrl, b64, fileName).then(url => {
+            imgTarget.cb(url);
+            processed++;
+            if (processed === total) { imgTarget = null; saveLocal(); render(); enableEdit(); toast('📷 อัปโหลดไป Drive ' + total + ' รูป'); }
+          }).catch(err => {
+            // Fallback to base64
+            imgTarget.cb(b64);
+            processed++;
+            if (processed === total) { imgTarget = null; saveLocal(); render(); enableEdit(); toast('📷 เพิ่ม ' + total + ' รูป (เก็บ Base64)'); }
+          });
+        } else {
+          // No Sheets URL — save as base64
+          imgTarget.cb(b64);
+          processed++;
+          if (processed === total) { imgTarget = null; saveLocal(); render(); enableEdit(); toast('📷 เพิ่ม ' + total + ' รูป (Base64)'); }
         }
       };
       img.src = ev.target.result;
@@ -391,6 +406,17 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
   });
   e.target.value = '';
 });
+
+async function uploadToDrive(url, base64, fileName) {
+  const r = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'upload_image', base64: base64, fileName: fileName })
+  });
+  const j = await r.json();
+  if (j.status === 'ok' && j.url) return j.url;
+  throw new Error(j.message || 'Upload failed');
+}
 
 function loadLocal(){try{D=JSON.parse(localStorage.getItem(SK)||'{}')}catch(e){D={}}}
 function saveLocal(){collect();localStorage.setItem(SK,JSON.stringify(D));toast('💾 บันทึกเรียบร้อย')}
@@ -545,9 +571,9 @@ function triggerUpload(sk, bi) {
   if (!document.body.classList.contains('editing')) return;
   collect();
   imgTarget = {
-    cb: function(b64) {
+    cb: function(urlOrB64) {
       if (!D[sk].blocks[bi].images) D[sk].blocks[bi].images = [];
-      D[sk].blocks[bi].images.push(b64);
+      D[sk].blocks[bi].images.push(urlOrB64);
     }
   };
   document.getElementById('fileInput').click();
@@ -560,7 +586,9 @@ function handleDrop(e, sk, bi) {
   const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
   if (!files.length) return;
   collect();
+  const sheetUrl = localStorage.getItem('surl') || '';
   let done = 0;
+  toast('📤 กำลังอัปโหลด ' + files.length + ' รูป...');
   files.forEach(file => {
     const reader = new FileReader();
     reader.onload = function(ev) {
@@ -573,10 +601,17 @@ function handleDrop(e, sk, bi) {
         if (h > MAX) { w = w*(MAX/h); h = MAX; }
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const b64 = canvas.toDataURL('image/jpeg', .75);
+        const fileName = 'report_' + Date.now() + '_' + Math.random().toString(36).slice(2,6) + '.jpg';
         if (!D[sk].blocks[bi].images) D[sk].blocks[bi].images = [];
-        D[sk].blocks[bi].images.push(canvas.toDataURL('image/jpeg', .75));
-        done++;
-        if (done === files.length) { saveLocal(); render(); enableEdit(); toast('📷 เพิ่ม '+files.length+' รูป'); }
+
+        const finish = () => { done++; if (done === files.length) { saveLocal(); render(); enableEdit(); toast('📷 เพิ่ม '+files.length+' รูป'); } };
+
+        if (sheetUrl) {
+          uploadToDrive(sheetUrl, b64, fileName).then(url => { D[sk].blocks[bi].images.push(url); finish(); }).catch(() => { D[sk].blocks[bi].images.push(b64); finish(); });
+        } else {
+          D[sk].blocks[bi].images.push(b64); finish();
+        }
       };
       img.src = ev.target.result;
     };
