@@ -257,6 +257,59 @@ body.editing .add-inline{display:block}
 }
 
 @media print{.fab,.ebar,.nw,.add-block-area,.add-inline,.cba,.img-overlay,.img-x,.tab-arrows{display:none!important}.tp{display:block!important;page-break-before:always}.card{box-shadow:none;border:1px solid #ddd;break-inside:avoid}}
+.pin-wrap{
+  margin-bottom:12px;
+}
+
+.pin-hidden{
+  position:absolute;
+  opacity:0;
+  pointer-events:none;
+  width:1px;
+  height:1px;
+}
+
+.pin-boxes{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:10px;
+  cursor:text;
+}
+
+.pin-box{
+  height:56px;
+  border:1.5px solid var(--bd);
+  border-radius:12px;
+  background:#fafbfb;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:24px;
+  font-weight:700;
+  color:var(--f);
+  transition:var(--e);
+  position:relative;
+}
+
+.pin-box.active{
+  border-color:var(--fl);
+  background:#fff;
+  box-shadow:0 0 0 4px rgba(79,138,112,.12);
+}
+
+.pin-box.filled::before{
+  content:'•';
+  font-size:28px;
+  line-height:1;
+}
+
+@media(max-width:480px){
+  .pin-box{
+    height:50px;
+    font-size:22px;
+    border-radius:10px;
+  }
+}
 </style>
 </head>
 <body>
@@ -271,8 +324,18 @@ body.editing .add-inline{display:block}
 
 <div class="ov" id="mPw"><div class="mb">
   <h3>🔐 เข้าสู่โหมดแก้ไข</h3>
-  <p class="mdesc">รหัสผ่านเริ่มต้น: 1234</p>
-  <input type="password" id="iPw" placeholder="••••••" onkeydown="if(event.key==='Enter')chkPw()">
+  <p class="mdesc">กรอกรหัส PIN 4 หลัก</p>
+
+  <div class="pin-wrap">
+    <input type="password" id="iPw" class="pin-hidden" inputmode="numeric" maxlength="4" autocomplete="off" oninput="syncPinBoxes()" onkeydown="handlePinKey(event)">
+    <div class="pin-boxes" onclick="focusPinInput()">
+      <div class="pin-box" id="pin1"></div>
+      <div class="pin-box" id="pin2"></div>
+      <div class="pin-box" id="pin3"></div>
+      <div class="pin-box" id="pin4"></div>
+    </div>
+  </div>
+
   <div class="er" id="ePw"></div>
   <div class="mba">
     <button class="bc" onclick="cl('mPw')">ยกเลิก</button>
@@ -1058,8 +1121,9 @@ function confirmAddSection() {
 // Edit Mode
 // =========================
 function chkPw() {
-  const inputPw = document.getElementById('iPw').value;
-  const correctPw = (D.settings && D.settings.password) ? D.settings.password : '1234';
+  const input = document.getElementById('iPw');
+  const inputPw = (input.value || '').trim();
+  const correctPw = (D.settings && D.settings.password) ? String(D.settings.password) : '1234';
 
   if (inputPw === correctPw) {
     cl('mPw');
@@ -1068,8 +1132,10 @@ function chkPw() {
     enableEdit();
     toast('🔓 เข้าสู่โหมดแก้ไข');
   } else {
-    document.getElementById('ePw').textContent = 'รหัสผ่านไม่ถูกต้อง';
-    document.getElementById('iPw').value = '';
+    document.getElementById('ePw').textContent = 'PIN ไม่ถูกต้อง';
+    input.value = '';
+    syncPinBoxes();
+    setTimeout(() => focusPinInput(), 100);
   }
 }
 
@@ -1109,13 +1175,13 @@ function saveSettings() {
   D.settings.position = document.getElementById('sPos').value;
   D.settings.period = document.getElementById('sPeriod').value;
 
-  const np = document.getElementById('sNewPw').value;
-  if (np) D.settings.password = np;
-
-  cl('mSt');
-  saveLocal(false);
-  renderHero();
-  toast('⚙️ บันทึกตั้งค่าแล้ว');
+const np = document.getElementById('sNewPw').value.trim();
+if (np) {
+  if (!/^\d{4}$/.test(np)) {
+    toast('กรุณาตั้ง PIN เป็นตัวเลข 4 หลัก');
+    return;
+  }
+  D.settings.password = np;
 }
 
 function updateShareLink() {
@@ -1233,12 +1299,15 @@ function toast(m) {
 function op(id) {
   document.getElementById(id).classList.add('show');
 
-  if (id === 'mPw') {
-    const p = document.getElementById('iPw');
-    p.value = '';
-    document.getElementById('ePw').textContent = '';
-    setTimeout(() => p.focus(), 150);
-  }
+if (id === 'mPw') {
+  const p = document.getElementById('iPw');
+  p.value = '';
+  document.getElementById('ePw').textContent = '';
+  setTimeout(() => {
+    syncPinBoxes();
+    p.focus();
+  }, 150);
+}
 
   if (id === 'mSh') {
     const sv = localStorage.getItem('surl') || '';
@@ -1250,6 +1319,46 @@ function op(id) {
 
 function cl(id) {
   document.getElementById(id).classList.remove('show');
+}
+  function focusPinInput() {
+  const input = document.getElementById('iPw');
+  input.focus();
+}
+
+function syncPinBoxes() {
+  const input = document.getElementById('iPw');
+  let val = (input.value || '').replace(/\D/g, '').slice(0, 4);
+  input.value = val;
+
+  for (let i = 1; i <= 4; i++) {
+    const box = document.getElementById('pin' + i);
+    if (!box) continue;
+    box.classList.remove('filled', 'active');
+
+    if (val[i - 1]) {
+      box.classList.add('filled');
+    }
+
+    if ((val.length === i - 1) || (val.length >= 4 && i === 4)) {
+      box.classList.add('active');
+    }
+  }
+
+  if (val.length === 4) {
+    chkPw();
+  }
+}
+
+function handlePinKey(event) {
+  const allowed = ['Backspace', 'Delete', 'Tab', 'Enter', 'ArrowLeft', 'ArrowRight'];
+  if (allowed.includes(event.key)) {
+    if (event.key === 'Enter') chkPw();
+    return;
+  }
+
+  if (!/[0-9]/.test(event.key)) {
+    event.preventDefault();
+  }
 }
 </script>
 </body>
