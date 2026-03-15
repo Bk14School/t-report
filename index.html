@@ -1175,14 +1175,21 @@ function saveSettings() {
   D.settings.position = document.getElementById('sPos').value;
   D.settings.period = document.getElementById('sPeriod').value;
 
-const np = document.getElementById('sNewPw').value.trim();
-if (np) {
-  if (!/^\d{4}$/.test(np)) {
-    toast('กรุณาตั้ง PIN เป็นตัวเลข 4 หลัก');
-    return;
+  const np = document.getElementById('sNewPw').value.trim();
+  if (np) {
+    if (!/^\d{4}$/.test(np)) {
+      toast('กรุณาตั้ง PIN เป็นตัวเลข 4 หลัก');
+      return;
+    }
+    D.settings.password = np;
   }
-  D.settings.password = np;
-}
+  
+  // เพิ่มการบันทึกข้อมูล ปิดหน้าต่าง และอัปเดตหน้าจอ
+  saveLocal(false);
+  cl('mSt'); // ปิด Modal ตั้งค่า
+  render();  // รีเฟรชข้อมูลที่แสดงใหม่
+  toast('⚙️ บันทึกการตั้งค่าเรียบร้อยแล้ว');
+} // <--- ใส่ปีกกาปิดฟังก์ชันให้ถูกต้อง
 
 function updateShareLink() {
   const linkInput = document.getElementById('shareLink');
