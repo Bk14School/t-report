@@ -69,7 +69,6 @@ body.editing .ed:empty::before{content:attr(data-ph);color:var(--mu);font-style:
 .nt{flex:none;padding:10px 20px;border:none;background:transparent;border-radius:var(--rs);font-family:'Mitr',sans-serif;font-size:13px;font-weight:300;color:var(--tm);cursor:pointer;transition:var(--e);white-space:nowrap;position:relative;user-select:none}
 .nt:hover{background:var(--fg);color:var(--f)}
 .nt.active{background:linear-gradient(135deg,var(--f),var(--fm));color:#fff;font-weight:400;box-shadow:0 2px 12px rgba(20,83,45,.2)}
-/* Tab arrows — edit mode ONLY */
 .tab-arrows{display:none;position:absolute;top:-4px;right:-4px;gap:2px;z-index:5}
 body.editing .nt .tab-arrows{display:flex}
 body.editing .nt{cursor:grab;padding-right:28px}
@@ -117,7 +116,6 @@ body.editing .cba{display:flex}
 .bk-header h3{font-family:'Mitr',sans-serif;font-size:17px;font-weight:500;color:var(--g);margin-bottom:4px;position:relative}
 .bk-header p{font-size:14px;color:var(--tm);font-weight:300;position:relative}
 
-/* ══ IMAGES — FULLY WORKING ══ */
 .img-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:12px}
 .img-slot{position:relative;border-radius:var(--rs);overflow:hidden;background:var(--bl);border:2px dashed var(--bd);aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;transition:var(--e);cursor:default}
 .img-slot:hover{border-color:var(--fl)}
@@ -126,18 +124,14 @@ body.editing .cba{display:flex}
 .img-slot img:hover{transform:scale(1.03)}
 .img-ph{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--ts);font-size:12px;font-weight:300;padding:16px;text-align:center}
 .img-ph svg{width:36px;height:36px;stroke:var(--mu);stroke-width:1.5;fill:none}
-/* Upload overlay — shows on hover in edit mode on existing images */
 .img-overlay{position:absolute;inset:0;background:rgba(20,83,45,.85);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;font-family:'Mitr',sans-serif;font-size:13px;font-weight:300;opacity:0;transition:var(--e);pointer-events:none;border-radius:var(--rs);backdrop-filter:blur(4px)}
 .img-overlay svg{width:32px;height:32px;stroke:#fff;stroke-width:1.5;fill:none}
 body.editing .has-img:hover .img-overlay{opacity:1;pointer-events:auto;cursor:pointer}
-/* Delete button — edit mode only on images that exist */
 .img-x{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:50%;background:rgba(220,38,38,.9);color:#fff;border:2px solid #fff;cursor:pointer;font-size:14px;display:none;align-items:center;justify-content:center;transition:var(--e);box-shadow:0 2px 8px rgba(0,0,0,.3);z-index:5}
 .img-x:hover{transform:scale(1.15);background:#dc2626}
 body.editing .has-img .img-x{display:flex}
-/* Upload placeholder slot — styled as dashed box, cursor pointer */
 .img-slot-upload{border:2px dashed var(--fl);background:var(--fg);cursor:pointer!important}
 .img-slot-upload:hover{background:var(--fp);border-color:var(--f)}
-/* Drop zone highlight */
 .img-slot.dragover{border-color:var(--fl)!important;border-style:solid!important;background:var(--fg)!important}
 .img-slot.dragover .img-ph{color:var(--f)}
 .img-slot.dragover .img-ph svg{stroke:var(--fl)}
@@ -151,7 +145,6 @@ body.editing .add-inline{display:block}
 .add-inline-btn{padding:6px 16px;border:1.5px dashed var(--fl);border-radius:8px;background:transparent;color:var(--fl);font-family:'Mitr',sans-serif;font-size:11px;cursor:pointer;transition:var(--e)}
 .add-inline-btn:hover{background:var(--fg)}
 
-/* ══ LIGHTBOX ══ */
 .lbox{display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.92);align-items:center;justify-content:center;cursor:zoom-out;backdrop-filter:blur(4px);flex-direction:column;gap:16px}
 .lbox.show{display:flex}
 .lbox img{max-width:94%;max-height:85vh;border-radius:12px;box-shadow:0 0 80px rgba(0,0,0,.5);animation:su .3s ease;object-fit:contain}
@@ -163,7 +156,6 @@ body.editing .add-inline{display:block}
 @keyframes su{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes pu{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
 
-/* ══ RESPONSIVE — TABLET ══ */
 @media(max-width:768px){
   .hi{padding:40px 20px 36px}
   .nw,.mn{padding-left:16px;padding-right:16px}
@@ -179,7 +171,6 @@ body.editing .add-inline{display:block}
   .ebar{padding:8px 14px}
 }
 
-/* ══ RESPONSIVE — MOBILE ══ */
 @media(max-width:480px){
   .hi{padding:28px 14px 24px}
   .nw{padding:0 10px;margin-top:-18px}
@@ -189,84 +180,53 @@ body.editing .add-inline{display:block}
   .hero-badge{font-size:10px;padding:4px 12px}
   .hch{gap:5px}
   .ch{font-size:11px;padding:4px 10px}
-
-  /* Nav scrollable on mobile */
   .nb{padding:3px;gap:2px;border-radius:12px}
   .nt{padding:8px 12px;font-size:11px;border-radius:8px}
   body.editing .nt{padding-right:24px}
   .tab-arr{width:16px;height:16px;font-size:7px;border-width:1.5px}
-
-  /* Edit bar stacked */
   .ebar{padding:8px 10px;gap:6px}
   .ebl{font-size:11px}
   .eba{width:100%;justify-content:center}
   .eba .bb{flex:1;text-align:center;padding:6px 6px;font-size:10px;min-width:0}
-
-  /* Cards */
   .card{border-radius:10px;margin-bottom:12px}
   .ct{padding:10px 12px;gap:8px}
   .cn{min-width:30px;height:30px;border-radius:8px;font-size:12px}
   .ct h3{font-size:12px}
   .cbody{padding:12px}
   .cba button{width:22px;height:22px;font-size:10px}
-
-  /* Section title */
   .stt{gap:10px;margin-bottom:16px;padding-bottom:12px}
   .sti{width:36px;height:36px;border-radius:10px;font-size:16px}
   .stt h2{font-size:15px}
   .stt p{font-size:11px}
-
-  /* Info grid single column */
   .ig{grid-template-columns:1fr;gap:8px}
   .ic{padding:10px 12px}
   .ic .fl{font-size:9px}
   .ic .iv{font-size:13px}
-
-  /* Images 2 columns on mobile */
   .img-grid{grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
   .img-slot{border-radius:8px}
   .img-ph{font-size:10px;padding:10px}
   .img-ph svg{width:28px;height:28px}
   .img-x{width:22px;height:22px;font-size:11px;top:4px;right:4px}
-
-  /* Checklist */
   .cln{width:24px;height:24px;font-size:10px;border-radius:6px}
   .clt{font-size:13px}
   .cld{padding-left:34px;font-size:12px}
-
-  /* Block header */
   .bk-header{padding:16px;border-radius:10px}
   .bk-header h3{font-size:14px}
   .bk-header p{font-size:12px}
-
-  /* Result box */
   .rb{padding:10px 12px;margin-top:10px}
-
-  /* Add block */
   .add-block-btn{padding:10px 20px;font-size:12px;border-radius:10px}
-
-  /* Modals */
   .mb{padding:20px;border-radius:14px}
   .mb h3{font-size:16px}
   .mb input,.mb select{padding:9px 12px;font-size:13px}
   .mba button{padding:10px;font-size:12px}
-
-  /* Editable */
   body.editing .ed{padding:4px 8px;font-size:13px}
-
-  /* Lightbox */
   .lbox img{max-width:98%;max-height:80vh;border-radius:8px}
   .lbox-close{top:10px;right:10px;width:36px;height:36px;font-size:20px}
-
-  /* FAB */
   .fab{width:48px;height:48px;bottom:20px;right:16px}
   .fab svg{width:18px;height:18px}
-
-  /* Toast */
   .toast{font-size:12px;padding:10px 20px;bottom:20px}
 }
 
-/* ══ VERY SMALL SCREENS ══ */
 @media(max-width:360px){
   .hero h1{font-size:17px}
   .nt{padding:6px 8px;font-size:10px}
@@ -307,7 +267,7 @@ body.editing .add-inline{display:block}
 
 <div class="ov" id="mSh"><div class="mb">
   <h3>📊 เชื่อมต่อ Google Sheets</h3><p class="mdesc">วาง Apps Script Web App URL</p>
-  <label>URL</label><input id="iSh" placeholder="https://script.google.com/macros/s/.../exec">
+  <label>URL</label><input id="iSh" placeholder="https://script.google.com/macros/s/AKfycbwXG1tcvvo3S14TyuCo-4yNowry8efFEYQ1TvQ38_nscqZAeqSalAE_h9U6KjA_6A7k/exec">
   <div class="er" id="eSh"></div>
   <div class="mba">
     <button class="bc" onclick="cl('mSh')">ยกเลิก</button>
@@ -317,10 +277,10 @@ body.editing .add-inline{display:block}
   <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">
     <label>🔗 Link สำหรับเปิดบนมือถือ/เครื่องอื่น</label>
     <div style="display:flex;gap:6px">
-      <input id="shareLink" readonly style="flex:1;font-size:11px;background:var(--bl);cursor:text" placeholder="กดดึงข้อมูลก่อน...">
+      <input id="shareLink" readonly style="flex:1;font-size:11px;background:var(--bl);cursor:text" placeholder="ระบบจะดึงข้อมูลให้อัตโนมัติแล้ว">
       <button class="bu" style="flex:none;padding:8px 14px;font-size:12px" onclick="copyShareLink()">คัดลอก</button>
     </div>
-    <p style="font-size:10px;color:var(--ts);margin-top:4px">เปิด link นี้บนมือถือ → ข้อมูลจะโหลดจาก Sheets อัตโนมัติ</p>
+    <p style="font-size:10px;color:var(--ts);margin-top:4px">เปิด link นี้บนมือถือ ข้อมูลจะโหลดจาก Sheets อัตโนมัติ</p>
   </div>
 </div></div>
 
@@ -362,14 +322,13 @@ body.editing .add-inline{display:block}
 <div class="nw"><div class="nb" id="navBar"></div></div>
 <div class="mn" id="mainContent"></div>
 
-<!-- HIDDEN FILE INPUT — supports multiple -->
+<!-- HIDDEN FILE INPUT -->
 <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
 
 <script>
 const SK='tr_cms_v3';
 let D={},activeTab='',imgTarget=null;
 
-// ── FILE INPUT LISTENER — Upload to Drive or fallback Base64 ──
 document.getElementById('fileInput').addEventListener('change', function(e) {
   const files = Array.from(e.target.files);
   if (!files.length || !imgTarget) return;
@@ -394,19 +353,16 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
         const fileName = 'report_' + Date.now() + '_' + Math.random().toString(36).slice(2,6) + '.jpg';
 
         if (sheetUrl) {
-          // Upload to Google Drive via Apps Script
           uploadToDrive(sheetUrl, b64, fileName).then(url => {
             imgTarget.cb(url);
             processed++;
             if (processed === total) { imgTarget = null; saveLocal(); render(); enableEdit(); forceSync(); toast('📷 อัปโหลดไป Drive ' + total + ' รูป'); }
           }).catch(err => {
-            // Fallback to base64
             imgTarget.cb(b64);
             processed++;
             if (processed === total) { imgTarget = null; saveLocal(); render(); enableEdit(); toast('📷 เพิ่ม ' + total + ' รูป (เก็บ Base64)'); }
           });
         } else {
-          // No Sheets URL — save as base64
           imgTarget.cb(b64);
           processed++;
           if (processed === total) { imgTarget = null; saveLocal(); render(); enableEdit(); toast('📷 เพิ่ม ' + total + ' รูป (Base64)'); }
@@ -434,7 +390,6 @@ function loadLocal(){try{D=JSON.parse(localStorage.getItem(SK)||'{}')}catch(e){D
 function saveLocal(){collect();localStorage.setItem(SK,JSON.stringify(D));toast('💾 บันทึกเรียบร้อย');autoSync()}
 function secKeys(){return Object.keys(D).filter(k=>k.startsWith('sec_')).sort((a,b)=>parseInt(a.split('_')[1])-parseInt(b.split('_')[1]))}
 
-// ── AUTO SYNC: บันทึกกลับ Sheets อัตโนมัติ (ถ้ามี URL) ──
 let syncTimer=null;
 function autoSync(){
   const url=localStorage.getItem('surl');
@@ -444,10 +399,9 @@ function autoSync(){
     fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'save_all',data:D})})
     .then(r=>r.json()).then(j=>{if(j.status==='ok')console.log('Auto-synced to Sheets')})
     .catch(e=>console.warn('Auto-sync failed:',e));
-  },2000); // Debounce 2 วินาที
+  },2000); 
 }
 
-// ── FORCE SYNC: บันทึกทันทีไม่รอ debounce (ใช้หลังอัปรูป) ──
 function forceSync(){
   const url=localStorage.getItem('surl');
   if(!url)return;
@@ -456,78 +410,44 @@ function forceSync(){
   .catch(e=>console.warn('Force sync failed:',e));
 }
 
-// ── INIT: โหลด local ก่อน ถ้ามี surl ให้ดึงจาก Sheets ──
-document.addEventListener('DOMContentLoaded',async ()=>{
-  // Check URL parameter ?api=... (for sharing across devices)
-  const urlParams=new URLSearchParams(window.location.search);
-  const apiParam=urlParams.get('api');
-  if(apiParam) localStorage.setItem('surl',apiParam);
+// ── INIT: เปิดหน้าเว็บปุ๊บ โหลดข้อมูลอัตโนมัติ ──
+document.addEventListener('DOMContentLoaded', async () => {
+  // 📌 1. วาง URL ของ Google Apps Script ของคุณที่บรรทัดนี้!
+  // ตัวอย่าง: const DEFAULT_SHEET_URL = 'https://script.google.com/macros/s/AKfycbwXG1tc.../exec';
+  const DEFAULT_SHEET_URL = 'https://script.google.com/macros/s/AKfycbyR6f1T2V8Kj4M_zY9-bQ5aKx_pW3tM8UjN-p_x3yvH/exec'; // แทนที่ลิงก์ที่นี่ครับ
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const apiParam = urlParams.get('api');
+  
+  // 📌 2. ให้จำลิงก์ DEFAULT เป็นค่าเริ่มต้นเสมอ
+  const targetUrl = apiParam || DEFAULT_SHEET_URL;
+  localStorage.setItem('surl', targetUrl);
 
   loadLocal();
   if(!D.settings) loadSample();
   render();
 
-  // Auto-pull from Sheets on load
-  const url=localStorage.getItem('surl');
-  if(url){
+  // 📌 3. ดึงข้อมูลอัตโนมัติเมื่อเปิดเว็บ
+  if(targetUrl){
     try{
-      toast('☁️ กำลังโหลดข้อมูล...');
-      const r=await fetch(url);
-      const j=await r.json();
-      if(j.status==='ok'&&j.data){
-        D={};
-        for(const[k,v]of Object.entries(j.data)) D[k]=typeof v==='string'?JSON.parse(v):v;
-        localStorage.setItem(SK,JSON.stringify(D));
-        activeTab='';
+      toast('☁️ กำลังโหลดข้อมูลล่าสุด...');
+      const r = await fetch(targetUrl);
+      const j = await r.json();
+      if(j.status === 'ok' && j.data){
+        D = {};
+        for(const[k,v] of Object.entries(j.data)) D[k] = typeof v === 'string' ? JSON.parse(v) : v;
+        localStorage.setItem(SK, JSON.stringify(D));
+        activeTab = '';
         render();
         toast('☁️ โหลดข้อมูลล่าสุดแล้ว');
       }
-    }catch(e){console.warn('Auto-pull failed:',e)}
+    }catch(e){console.warn('Auto-pull failed:', e)}
   }
 });
 
 function loadSample(){
-  D={settings:{title:'รายงานผลการปฏิบัติงาน',subtitle:'เพื่อประกอบการพิจารณาเลื่อนเงินเดือน ข้าราชการครูและบุคลากรทางการศึกษา สายงานการสอน',password:'1234',school:'โรงเรียนบ้านคลอง 14',period:'ครั้งที่ 1 (1 ตุลาคม 2568 – 31 มีนาคม 2569)',position:'ครู (ยังไม่มีวิทยฐานะ)'},
-  sec_1:{tab:'ข้อมูลส่วนตัว',icon:'👤',blocks:[
-    {id:'p1',type:'info-grid',title:'ข้อมูลทั่วไป',data:{'ชื่อ-สกุล':'นายจิรพิพัฒน์ พะสุรัมย์','อายุ':'18 ปี','ตำแหน่ง':'ครู (ยังไม่มีวิทยฐานะ)','สถานศึกษา':'โรงเรียนบ้านคลอง 14','สังกัด':'สพป.นครนายก','อัตราเงินเดือน':'0 บาท','เริ่มรับราชการ':'25 เมษายน 2565','ปฏิบัติราชการ':'3 ปี'}},
-    {id:'p2',type:'images-only',title:'รูปประจำตัว / ภาพกิจกรรม',images:[]},
-  ]},
-  sec_2:{tab:'องค์ประกอบที่ 1',icon:'✅',heading:'ประสิทธิภาพและประสิทธิผลการปฏิบัติงานตามมาตรฐานตำแหน่ง',blocks:[
-    {id:'c11',type:'text-images',title:'1.1 สร้างและ/หรือพัฒนาหลักสูตร',content:'',sub:'',images:[]},
-    {id:'c12',type:'text-images',title:'1.2 การออกแบบการจัดการเรียนรู้',content:'',sub:'',images:[]},
-    {id:'c13',type:'text-images',title:'1.3 การจัดกิจกรรมการเรียนรู้',content:'',sub:'',images:[]},
-    {id:'c14',type:'text-images',title:'1.4 สร้างและ/หรือพัฒนาสื่อ นวัตกรรม เทคโนโลยี',content:'',sub:'',images:[]},
-    {id:'c15',type:'text-images',title:'1.5 วัดและประเมินผลการเรียนรู้',content:'',sub:'',images:[]},
-    {id:'c16',type:'text-images',title:'1.6 ศึกษา วิเคราะห์ สังเคราะห์ เพื่อแก้ปัญหา',content:'',sub:'',images:[]},
-    {id:'c17',type:'text-images',title:'1.7 จัดบรรยากาศที่ส่งเสริมและพัฒนาผู้เรียน',content:'',sub:'',images:[]},
-    {id:'c18',type:'text-images',title:'1.8 อบรมและพัฒนาคุณลักษณะที่ดีของผู้เรียน',content:'',sub:'',images:[]},
-  ]},
-  sec_3:{tab:'องค์ประกอบที่ 2',icon:'🤝',heading:'การมีส่วนร่วมในการพัฒนาการศึกษา',blocks:[
-    {id:'c21',type:'text-images',title:'2.1 จัดทำข้อมูลสารสนเทศของผู้เรียนและรายวิชา',content:'',sub:'',images:[]},
-    {id:'c22',type:'text-images',title:'2.2 ดำเนินการตามระบบดูแลช่วยเหลือผู้เรียน',content:'',sub:'',images:[]},
-    {id:'c23',type:'text-images',title:'2.3 ปฏิบัติงานวิชาการและงานอื่นๆ ของสถานศึกษา',content:'',sub:'',images:[]},
-    {id:'c24',type:'text-images',title:'2.4 ประสานความร่วมมือกับผู้ปกครอง ภาคีเครือข่าย',content:'',sub:'',images:[]},
-  ]},
-  sec_4:{tab:'องค์ประกอบที่ 3',icon:'🛡️',heading:'วินัย คุณธรรม จริยธรรม จรรยาบรรณวิชาชีพ',blocks:[
-    {id:'e1',type:'checklist',title:'การปฏิบัติตน 10 ข้อ',items:[
-      {label:'ยึดมั่นในสถาบันหลักของประเทศ',desc:''},
-      {label:'ซื่อสัตย์ สุจริต มีจิตสำนึกที่ดี',desc:''},
-      {label:'กล้าคิด กล้าตัดสินใจ กระทำในสิ่งที่ถูกต้อง',desc:''},
-      {label:'จิตอาสา จิตสาธารณะ มุ่งประโยชน์ส่วนรวม',desc:''},
-      {label:'มุ่งผลสัมฤทธิ์ของงาน',desc:''},
-      {label:'ปฏิบัติหน้าที่อย่างเป็นธรรม ไม่เลือกปฏิบัติ',desc:''},
-      {label:'ดำรงตนเป็นแบบอย่างที่ดี',desc:''},
-      {label:'เคารพศักดิ์ศรีความเป็นมนุษย์ คำนึงถึงสิทธิเด็ก',desc:''},
-      {label:'ยึดถือจรรยาบรรณวิชาชีพ',desc:''},
-      {label:'มีวินัยและรักษาวินัย',desc:''},
-    ]},
-  ]},
-  sec_5:{tab:'ประเด็นท้าทาย',icon:'⭐',heading:'ระดับความสำเร็จในการพัฒนางานที่เสนอเป็นประเด็นท้าทาย',blocks:[
-    {id:'ch1',type:'header',title:'ข้อตกลงในการพัฒนางาน',content:''},
-    {id:'ch2',type:'text-images',title:'วิธีดำเนินการ',content:'',sub:'',images:[]},
-    {id:'ch3',type:'text-only',title:'ผลลัพธ์เชิงปริมาณ',content:'',sub:''},
-    {id:'ch4',type:'text-only',title:'ผลลัพธ์เชิงคุณภาพ',content:'',sub:''},
-  ]}};
+  D={settings:{title:'รายงานผลการปฏิบัติงาน',subtitle:'เพื่อประกอบการพิจารณาเลื่อนเงินเดือน ข้าราชการครูและบุคลากรทางการศึกษา สายงานการสอน',password:'1234',school:'โรงเรียน',period:'',position:'ครู'},
+  sec_1:{tab:'ข้อมูลทั่วไป',icon:'📄',blocks:[]}};
   localStorage.setItem(SK,JSON.stringify(D));
 }
 
@@ -588,11 +508,9 @@ function renderBlock(sk,b,idx){
     inner+=`<div class="rb"><div class="fl">⭐ ผลลัพธ์</div><div class="ed" data-s="${sk}" data-i="${idx}" data-f="sub" data-ph="ผลลัพธ์...">${esc(b.sub||'')}</div></div>`;
   }
 
-  // ── IMAGE SECTION ──
   if(t==='text-images'||t==='images-only'){
     const imgs=(b.images||[]).filter(s=>s);
     const isEdit=document.body.classList.contains('editing');
-    // Only show image section if has images OR editing
     if(imgs.length||isEdit){
       if(isEdit) inner+='<div class="fl" style="margin-top:14px">🖼️ ภาพประกอบ</div>';
       inner+='<div class="img-grid">';
@@ -603,7 +521,6 @@ function renderBlock(sk,b,idx){
           <button class="img-x" onclick="event.stopPropagation();delImg('${sk}',${idx},${ii})">✕</button>
         </div>`;
       });
-      // Upload slot — ONLY in edit mode
       if(isEdit){
         inner+=`<div class="img-slot img-slot-upload" onclick="triggerUpload('${sk}',${idx})"
           ondragover="event.preventDefault();this.classList.add('dragover')"
@@ -628,7 +545,6 @@ function renderBlock(sk,b,idx){
 }
 function tIcon(t){return{'text-only':'📝','text-images':'🖼️','images-only':'🖼️','info-grid':'📊','header':'📌','checklist':'✅'}[t]||'📄'}
 
-// ══ IMAGE FUNCTIONS ══
 function triggerUpload(sk, bi) {
   if (!document.body.classList.contains('editing')) return;
   collect();
@@ -665,7 +581,7 @@ function handleDrop(e, sk, bi) {
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
         const b64 = canvas.toDataURL('image/jpeg', .75);
         const fileName = 'report_' + Date.now() + '_' + Math.random().toString(36).slice(2,6) + '.jpg';
-        if (!D[sk].blocks[bi].images) D[sk].blocks[bi].images = [];
+        if (!D[sk].blocks[bi].images) D[sk].blocks[bi].images =[];
 
         const finish = () => { done++; if (done === files.length) { saveLocal(); render(); enableEdit(); forceSync(); toast('📷 เพิ่ม '+files.length+' รูป'); } };
 
@@ -689,7 +605,7 @@ function delImg(sk, bi, ii) {
 }
 
 function openLB(sk, bi, ii) {
-  const imgs = D[sk]?.blocks?.[bi]?.images || [];
+  const imgs = D[sk]?.blocks?.[bi]?.images ||[];
   if (!imgs[ii]) return;
   document.getElementById('lboxImg').src = imgs[ii];
   document.getElementById('lboxInfo').textContent = 'รูปที่ ' + (ii+1) + ' / ' + imgs.length;
@@ -697,16 +613,12 @@ function openLB(sk, bi, ii) {
 }
 function closeLB(e) { if (e.target === e.currentTarget || e.target.tagName !== 'IMG') document.getElementById('lbox').classList.remove('show'); }
 
-// ══ TAB ══
 function switchTab(k){if(document.body.classList.contains('editing'))collect();activeTab=k;renderNav();renderSections();const t=document.getElementById('tab-'+k);if(t)t.classList.add('active');if(document.body.classList.contains('editing'))enableEdit()}
-
 function moveTab(k,dir){collect();const keys=secKeys();const idx=keys.indexOf(k);const ni=idx+dir;if(ni<0||ni>=keys.length)return;const nA=parseInt(keys[idx].split('_')[1]),nB=parseInt(keys[ni].split('_')[1]);const dA=D[keys[idx]],dB=D[keys[ni]];D['sec_'+nA]=dB;D['sec_'+nB]=dA;localStorage.setItem(SK,JSON.stringify(D));activeTab='sec_'+nB;render();enableEdit();toast('↔️ ย้าย Tab แล้ว')}
 function delTab(k){if(!confirm('ลบ Tab "'+((D[k]||{}).tab||k)+'"?'))return;collect();delete D[k];localStorage.setItem(SK,JSON.stringify(D));const keys=secKeys();activeTab=keys[0]||'';render();if(document.body.classList.contains('editing'))enableEdit();toast('🗑️ ลบ Tab แล้ว')}
 
-// ══ COLLECT ══
 function collect(){document.querySelectorAll('.ed[data-s]').forEach(el=>{const sk=el.dataset.s,bi=parseInt(el.dataset.i),f=el.dataset.f,v=el.textContent.trim();if(!D[sk]||!D[sk].blocks||!D[sk].blocks[bi])return;const b=D[sk].blocks[bi];if(f.startsWith('data.')){if(!b.data)b.data={};b.data[f.slice(5)]=v}else if(f.startsWith('items.')){const p=f.split('.');if(b.items&&b.items[parseInt(p[1])])b.items[parseInt(p[1])][p[2]]=v}else b[f]=v})}
 
-// ══ EDIT ══
 function chkPw(){if(document.getElementById('iPw').value===(D.settings||{}).password||'1234'){cl('mPw');document.body.classList.add('editing');render();enableEdit();toast('🔓 เข้าสู่โหมดแก้ไข')}else{document.getElementById('ePw').textContent='รหัสผ่านไม่ถูกต้อง';document.getElementById('iPw').value=''}}
 function enableEdit(){document.querySelectorAll('.ed').forEach(el=>el.contentEditable='true')}
 function exitEdit(){collect();saveLocal();document.body.classList.remove('editing');document.querySelectorAll('.ed').forEach(el=>el.contentEditable='false');render()}
@@ -723,19 +635,15 @@ function confirmAddSection(){const tab=document.getElementById('asTab').value.tr
 function openSettings(){const s=D.settings||{};document.getElementById('sTitle').value=s.title||'';document.getElementById('sSub').value=s.subtitle||'';document.getElementById('sSchool').value=s.school||'';document.getElementById('sPos').value=s.position||'';document.getElementById('sPeriod').value=s.period||'';document.getElementById('sNewPw').value='';op('mSt')}
 function saveSettings(){if(!D.settings)D.settings={};D.settings.title=document.getElementById('sTitle').value;D.settings.subtitle=document.getElementById('sSub').value;D.settings.school=document.getElementById('sSchool').value;D.settings.position=document.getElementById('sPos').value;D.settings.period=document.getElementById('sPeriod').value;const np=document.getElementById('sNewPw').value;if(np)D.settings.password=np;cl('mSt');saveLocal();renderHero();toast('⚙️ บันทึกตั้งค่าแล้ว')}
 
-// ══ SHEETS ══
 function updateShareLink(){
-  const url=localStorage.getItem('surl');
   const linkInput=document.getElementById('shareLink');
-  if(url&&linkInput){
-    const base=window.location.origin+window.location.pathname;
-    linkInput.value=base+'?api='+encodeURIComponent(url);
+  if(linkInput){
+    linkInput.value=window.location.origin+window.location.pathname;
   }
 }
 function copyShareLink(){
   const linkInput=document.getElementById('shareLink');
-  if(!linkInput.value){toast('❌ ยังไม่ได้เชื่อมต่อ Sheets');return}
-  navigator.clipboard.writeText(linkInput.value).then(()=>toast('📋 คัดลอก Link แล้ว — ส่งไปเปิดบนมือถือได้เลย')).catch(()=>{linkInput.select();document.execCommand('copy');toast('📋 คัดลอก Link แล้ว')});
+  navigator.clipboard.writeText(linkInput.value).then(()=>toast('📋 คัดลอก Link แล้ว')).catch(()=>{linkInput.select();document.execCommand('copy');toast('📋 คัดลอก Link แล้ว')});
 }
 
 async function pullSheet(){const url=document.getElementById('iSh').value.trim();if(!url){document.getElementById('eSh').textContent='กรุณาวาง URL';return}localStorage.setItem('surl',url);updateShareLink();try{document.getElementById('eSh').textContent='กำลังโหลด...';const r=await fetch(url);const j=await r.json();if(j.status==='ok'&&j.data){D={};for(const[k,v]of Object.entries(j.data))D[k]=typeof v==='string'?JSON.parse(v):v;localStorage.setItem(SK,JSON.stringify(D));cl('mSh');activeTab='';render();if(document.body.classList.contains('editing'))enableEdit();toast('📊 ดึงข้อมูลสำเร็จ!')}else document.getElementById('eSh').textContent=j.message||'อ่านไม่ได้'}catch(e){document.getElementById('eSh').textContent='ผิดพลาด: '+e.message}}
