@@ -309,7 +309,19 @@ body.editing .add-inline{display:block}
   <h3>📊 เชื่อมต่อ Google Sheets</h3><p class="mdesc">วาง Apps Script Web App URL</p>
   <label>URL</label><input id="iSh" placeholder="https://script.google.com/macros/s/.../exec">
   <div class="er" id="eSh"></div>
-  <div class="mba"><button class="bc" onclick="cl('mSh')">ยกเลิก</button><button class="bu" onclick="pullSheet()">ดึงข้อมูล</button><button class="bgo" onclick="pushSheet()">บันทึกกลับ</button></div>
+  <div class="mba">
+    <button class="bc" onclick="cl('mSh')">ยกเลิก</button>
+    <button class="bu" onclick="pullSheet()">ดึงข้อมูล</button>
+    <button class="bgo" onclick="pushSheet()">บันทึกกลับ</button>
+  </div>
+  <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">
+    <label>🔗 Link สำหรับเปิดบนมือถือ/เครื่องอื่น</label>
+    <div style="display:flex;gap:6px">
+      <input id="shareLink" readonly style="flex:1;font-size:11px;background:var(--bl);cursor:text" placeholder="กดดึงข้อมูลก่อน...">
+      <button class="bu" style="flex:none;padding:8px 14px;font-size:12px" onclick="copyShareLink()">คัดลอก</button>
+    </div>
+    <p style="font-size:10px;color:var(--ts);margin-top:4px">เปิด link นี้บนมือถือ → ข้อมูลจะโหลดจาก Sheets อัตโนมัติ</p>
+  </div>
 </div></div>
 
 <div class="ov" id="mAb"><div class="mb">
@@ -386,7 +398,7 @@ document.getElementById('fileInput').addEventListener('change', function(e) {
           uploadToDrive(sheetUrl, b64, fileName).then(url => {
             imgTarget.cb(url);
             processed++;
-            if (processed === total) { imgTarget = null; saveLocal(); render(); enableEdit(); toast('📷 อัปโหลดไป Drive ' + total + ' รูป'); }
+            if (processed === total) { imgTarget = null; saveLocal(); render(); enableEdit(); forceSync(); toast('📷 อัปโหลดไป Drive ' + total + ' รูป'); }
           }).catch(err => {
             // Fallback to base64
             imgTarget.cb(b64);
@@ -419,10 +431,60 @@ async function uploadToDrive(url, base64, fileName) {
 }
 
 function loadLocal(){try{D=JSON.parse(localStorage.getItem(SK)||'{}')}catch(e){D={}}}
-function saveLocal(){collect();localStorage.setItem(SK,JSON.stringify(D));toast('💾 บันทึกเรียบร้อย')}
+function saveLocal(){collect();localStorage.setItem(SK,JSON.stringify(D));toast('💾 บันทึกเรียบร้อย');autoSync()}
 function secKeys(){return Object.keys(D).filter(k=>k.startsWith('sec_')).sort((a,b)=>parseInt(a.split('_')[1])-parseInt(b.split('_')[1]))}
 
-document.addEventListener('DOMContentLoaded',()=>{loadLocal();if(!D.settings)loadSample();render()});
+// ── AUTO SYNC: บันทึกกลับ Sheets อัตโนมัติ (ถ้ามี URL) ──
+let syncTimer=null;
+function autoSync(){
+  const url=localStorage.getItem('surl');
+  if(!url)return;
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(()=>{
+    fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'save_all',data:D})})
+    .then(r=>r.json()).then(j=>{if(j.status==='ok')console.log('Auto-synced to Sheets')})
+    .catch(e=>console.warn('Auto-sync failed:',e));
+  },2000); // Debounce 2 วินาที
+}
+
+// ── FORCE SYNC: บันทึกทันทีไม่รอ debounce (ใช้หลังอัปรูป) ──
+function forceSync(){
+  const url=localStorage.getItem('surl');
+  if(!url)return;
+  fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'save_all',data:D})})
+  .then(r=>r.json()).then(j=>{if(j.status==='ok')toast('☁️ ซิงค์ข้อมูลแล้ว')})
+  .catch(e=>console.warn('Force sync failed:',e));
+}
+
+// ── INIT: โหลด local ก่อน ถ้ามี surl ให้ดึงจาก Sheets ──
+document.addEventListener('DOMContentLoaded',async ()=>{
+  // Check URL parameter ?api=... (for sharing across devices)
+  const urlParams=new URLSearchParams(window.location.search);
+  const apiParam=urlParams.get('api');
+  if(apiParam) localStorage.setItem('surl',apiParam);
+
+  loadLocal();
+  if(!D.settings) loadSample();
+  render();
+
+  // Auto-pull from Sheets on load
+  const url=localStorage.getItem('surl');
+  if(url){
+    try{
+      toast('☁️ กำลังโหลดข้อมูล...');
+      const r=await fetch(url);
+      const j=await r.json();
+      if(j.status==='ok'&&j.data){
+        D={};
+        for(const[k,v]of Object.entries(j.data)) D[k]=typeof v==='string'?JSON.parse(v):v;
+        localStorage.setItem(SK,JSON.stringify(D));
+        activeTab='';
+        render();
+        toast('☁️ โหลดข้อมูลล่าสุดแล้ว');
+      }
+    }catch(e){console.warn('Auto-pull failed:',e)}
+  }
+});
 
 function loadSample(){
   D={settings:{title:'รายงานผลการปฏิบัติงาน',subtitle:'เพื่อประกอบการพิจารณาเลื่อนเงินเดือน ข้าราชการครูและบุคลากรทางการศึกษา สายงานการสอน',password:'1234',school:'โรงเรียนบ้านคลอง 14',period:'ครั้งที่ 1 (1 ตุลาคม 2568 – 31 มีนาคม 2569)',position:'ครู (ยังไม่มีวิทยฐานะ)'},
@@ -605,7 +667,7 @@ function handleDrop(e, sk, bi) {
         const fileName = 'report_' + Date.now() + '_' + Math.random().toString(36).slice(2,6) + '.jpg';
         if (!D[sk].blocks[bi].images) D[sk].blocks[bi].images = [];
 
-        const finish = () => { done++; if (done === files.length) { saveLocal(); render(); enableEdit(); toast('📷 เพิ่ม '+files.length+' รูป'); } };
+        const finish = () => { done++; if (done === files.length) { saveLocal(); render(); enableEdit(); forceSync(); toast('📷 เพิ่ม '+files.length+' รูป'); } };
 
         if (sheetUrl) {
           uploadToDrive(sheetUrl, b64, fileName).then(url => { D[sk].blocks[bi].images.push(url); finish(); }).catch(() => { D[sk].blocks[bi].images.push(b64); finish(); });
@@ -662,12 +724,26 @@ function openSettings(){const s=D.settings||{};document.getElementById('sTitle')
 function saveSettings(){if(!D.settings)D.settings={};D.settings.title=document.getElementById('sTitle').value;D.settings.subtitle=document.getElementById('sSub').value;D.settings.school=document.getElementById('sSchool').value;D.settings.position=document.getElementById('sPos').value;D.settings.period=document.getElementById('sPeriod').value;const np=document.getElementById('sNewPw').value;if(np)D.settings.password=np;cl('mSt');saveLocal();renderHero();toast('⚙️ บันทึกตั้งค่าแล้ว')}
 
 // ══ SHEETS ══
-async function pullSheet(){const url=document.getElementById('iSh').value.trim();if(!url){document.getElementById('eSh').textContent='กรุณาวาง URL';return}localStorage.setItem('surl',url);try{document.getElementById('eSh').textContent='กำลังโหลด...';const r=await fetch(url);const j=await r.json();if(j.status==='ok'&&j.data){D={};for(const[k,v]of Object.entries(j.data))D[k]=typeof v==='string'?JSON.parse(v):v;localStorage.setItem(SK,JSON.stringify(D));cl('mSh');activeTab='';render();if(document.body.classList.contains('editing'))enableEdit();toast('📊 ดึงข้อมูลสำเร็จ!')}else document.getElementById('eSh').textContent=j.message||'อ่านไม่ได้'}catch(e){document.getElementById('eSh').textContent='ผิดพลาด: '+e.message}}
+function updateShareLink(){
+  const url=localStorage.getItem('surl');
+  const linkInput=document.getElementById('shareLink');
+  if(url&&linkInput){
+    const base=window.location.origin+window.location.pathname;
+    linkInput.value=base+'?api='+encodeURIComponent(url);
+  }
+}
+function copyShareLink(){
+  const linkInput=document.getElementById('shareLink');
+  if(!linkInput.value){toast('❌ ยังไม่ได้เชื่อมต่อ Sheets');return}
+  navigator.clipboard.writeText(linkInput.value).then(()=>toast('📋 คัดลอก Link แล้ว — ส่งไปเปิดบนมือถือได้เลย')).catch(()=>{linkInput.select();document.execCommand('copy');toast('📋 คัดลอก Link แล้ว')});
+}
+
+async function pullSheet(){const url=document.getElementById('iSh').value.trim();if(!url){document.getElementById('eSh').textContent='กรุณาวาง URL';return}localStorage.setItem('surl',url);updateShareLink();try{document.getElementById('eSh').textContent='กำลังโหลด...';const r=await fetch(url);const j=await r.json();if(j.status==='ok'&&j.data){D={};for(const[k,v]of Object.entries(j.data))D[k]=typeof v==='string'?JSON.parse(v):v;localStorage.setItem(SK,JSON.stringify(D));cl('mSh');activeTab='';render();if(document.body.classList.contains('editing'))enableEdit();toast('📊 ดึงข้อมูลสำเร็จ!')}else document.getElementById('eSh').textContent=j.message||'อ่านไม่ได้'}catch(e){document.getElementById('eSh').textContent='ผิดพลาด: '+e.message}}
 async function pushSheet(){const url=document.getElementById('iSh').value.trim()||localStorage.getItem('surl')||'';if(!url){document.getElementById('eSh').textContent='กรุณาวาง URL';return}localStorage.setItem('surl',url);collect();try{document.getElementById('eSh').textContent='กำลังบันทึก...';const r=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'save_all',data:D})});const j=await r.json();if(j.status==='ok'){cl('mSh');toast('📊 บันทึกกลับ Sheets สำเร็จ!')}else document.getElementById('eSh').textContent=j.message||'ผิดพลาด'}catch(e){document.getElementById('eSh').textContent='ผิดพลาด: '+e.message}}
 
 function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
-function op(id){document.getElementById(id).classList.add('show');if(id==='mPw'){const p=document.getElementById('iPw');p.value='';document.getElementById('ePw').textContent='';setTimeout(()=>p.focus(),200)}}
+function op(id){document.getElementById(id).classList.add('show');if(id==='mPw'){const p=document.getElementById('iPw');p.value='';document.getElementById('ePw').textContent='';setTimeout(()=>p.focus(),200)}if(id==='mSh'){const sv=localStorage.getItem('surl')||'';document.getElementById('iSh').value=sv;document.getElementById('eSh').textContent='';updateShareLink()}}
 function cl(id){document.getElementById(id).classList.remove('show')}
 </script>
 </body>
