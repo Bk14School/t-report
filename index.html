@@ -366,7 +366,7 @@ body.editing .add-inline{display:block}
 <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
 
 <script>
-let D={},IMGS={},activeTab='',imgTarget=null,API='';
+let D={},IMGS={},activeTab='',imgTarget=null,API='https://script.google.com/macros/s/AKfycbx7QLgz3vpuDEDGWEH-sACcVm9v-bJlp9nkvrxvauioLCgf-0qHN8uHhFrhCxQo2U4t/exec';
 
 function getApi(){if(API)return API;const p=new URLSearchParams(location.search).get('api');if(p){API=p}return API||''}
 function imgUrl(id){return IMGS[id]?IMGS[id].url:''}
