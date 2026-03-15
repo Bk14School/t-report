@@ -618,8 +618,21 @@ function delTab(k){if(!confirm('ลบ Tab "'+((D[k]||{}).tab||k)+'"?'))return;c
 
 function collect(){document.querySelectorAll('.ed[data-s]').forEach(el=>{const sk=el.dataset.s,bi=parseInt(el.dataset.i),f=el.dataset.f,v=el.textContent.trim();if(!D[sk]||!D[sk].blocks||!D[sk].blocks[bi])return;const b=D[sk].blocks[bi];if(f.startsWith('data.')){if(!b.data)b.data={};b.data[f.slice(5)]=v}else if(f.startsWith('items.')){const p=f.split('.');if(b.items&&b.items[parseInt(p[1])])b.items[parseInt(p[1])][p[2]]=v}else b[f]=v})}
 
-function chkPw(){if(document.getElementById('iPw').value===(D.settings||{}).password||'1234'){cl('mPw');document.body.classList.add('editing');render();enableEdit();toast('🔓 เข้าสู่โหมดแก้ไข')}else{document.getElementById('ePw').textContent='รหัสผ่านไม่ถูกต้อง';document.getElementById('iPw').value=''}}
-function enableEdit(){document.querySelectorAll('.ed').forEach(el=>el.contentEditable='true')}
+function chkPw(){
+  const inputPw = document.getElementById('iPw').value;
+  const correctPw = (D.settings && D.settings.password) ? D.settings.password : '1234';
+  if(inputPw === correctPw){
+    cl('mPw');
+    document.body.classList.add('editing');
+    render();
+    enableEdit();
+    toast('🔓 เข้าสู่โหมดแก้ไข');
+  } else {
+    document.getElementById('ePw').textContent='รหัสผ่านไม่ถูกต้อง';
+    document.getElementById('iPw').value='';
+  }
+}
+  function enableEdit(){document.querySelectorAll('.ed').forEach(el=>el.contentEditable='true')}
 function exitEdit(){collect();saveLocal();document.body.classList.remove('editing');document.querySelectorAll('.ed').forEach(el=>el.contentEditable='false');render()}
 
 function moveBlock(sk,i,dir){collect();const bl=D[sk].blocks,ni=i+dir;if(ni<0||ni>=bl.length)return;[bl[i],bl[ni]]=[bl[ni],bl[i]];saveLocal();render();enableEdit()}
