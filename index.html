@@ -310,6 +310,54 @@ body.editing .add-inline{display:block}
     border-radius:10px;
   }
 }
+  .pin-pad{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  margin-top:14px;
+}
+
+.pin-key{
+  border:none;
+  border-radius:14px;
+  height:52px;
+  background:linear-gradient(180deg,#ffffff 0%, #f4f7f5 100%);
+  border:1px solid #e1e7e3;
+  color:var(--f);
+  font-family:'Mitr',sans-serif;
+  font-size:20px;
+  cursor:pointer;
+  transition:var(--e);
+  box-shadow:0 2px 8px rgba(15,23,42,.04);
+}
+
+.pin-key:hover{
+  transform:translateY(-1px);
+  background:#fff;
+  box-shadow:0 6px 16px rgba(15,23,42,.08);
+}
+
+.pin-key:active{
+  transform:scale(.98);
+}
+
+.pin-key-fn{
+  font-size:14px;
+  color:var(--tm);
+  background:#f7f8f8;
+}
+
+@media(max-width:480px){
+  .pin-key{
+    height:48px;
+    border-radius:12px;
+    font-size:18px;
+  }
+
+  .pin-key-fn{
+    font-size:13px;
+  }
+}
 </style>
 </head>
 <body>
@@ -327,12 +375,40 @@ body.editing .add-inline{display:block}
   <p class="mdesc">กรอกรหัส PIN 4 หลัก</p>
 
   <div class="pin-wrap">
-    <input type="password" id="iPw" class="pin-hidden" inputmode="numeric" maxlength="4" autocomplete="off" oninput="syncPinBoxes()" onkeydown="handlePinKey(event)">
+    <input
+      type="password"
+      id="iPw"
+      class="pin-hidden"
+      inputmode="numeric"
+      maxlength="4"
+      autocomplete="off"
+      oninput="syncPinBoxes()"
+      onkeydown="handlePinKey(event)"
+    >
+
     <div class="pin-boxes" onclick="focusPinInput()">
       <div class="pin-box" id="pin1"></div>
       <div class="pin-box" id="pin2"></div>
       <div class="pin-box" id="pin3"></div>
       <div class="pin-box" id="pin4"></div>
+    </div>
+
+    <div class="pin-pad">
+      <button type="button" class="pin-key" onclick="pressPin('1')">1</button>
+      <button type="button" class="pin-key" onclick="pressPin('2')">2</button>
+      <button type="button" class="pin-key" onclick="pressPin('3')">3</button>
+
+      <button type="button" class="pin-key" onclick="pressPin('4')">4</button>
+      <button type="button" class="pin-key" onclick="pressPin('5')">5</button>
+      <button type="button" class="pin-key" onclick="pressPin('6')">6</button>
+
+      <button type="button" class="pin-key" onclick="pressPin('7')">7</button>
+      <button type="button" class="pin-key" onclick="pressPin('8')">8</button>
+      <button type="button" class="pin-key" onclick="pressPin('9')">9</button>
+
+      <button type="button" class="pin-key pin-key-fn" onclick="clearPin()">ล้าง</button>
+      <button type="button" class="pin-key" onclick="pressPin('0')">0</button>
+      <button type="button" class="pin-key pin-key-fn" onclick="backspacePin()">⌫</button>
     </div>
   </div>
 
@@ -351,7 +427,7 @@ body.editing .add-inline{display:block}
   <label>โรงเรียน</label><input id="sSchool">
   <label>ตำแหน่ง</label><input id="sPos">
   <label>ช่วงเวลา</label><input id="sPeriod">
-  <label>รหัสผ่านใหม่ (เว้นว่าง=ไม่เปลี่ยน)</label><input type="password" id="sNewPw">
+<label>PIN ใหม่ 4 หลัก (เว้นว่าง=ไม่เปลี่ยน)</label><input type="password" id="sNewPw" inputmode="numeric" maxlength="4" placeholder="1234">
   <div class="mba">
     <button class="bc" onclick="cl('mSt')">ยกเลิก</button>
     <button class="bgo" onclick="saveSettings()">บันทึก</button>
@@ -1364,6 +1440,98 @@ function handlePinKey(event) {
   }
 
   if (!/[0-9]/.test(event.key)) {
+    event.preventDefault();
+  }
+}
+  function focusPinInput() {
+  const input = document.getElementById('iPw');
+  if (input) input.focus();
+}
+
+function syncPinBoxes() {
+  const input = document.getElementById('iPw');
+  if (!input) return;
+
+  let val = (input.value || '').replace(/\D/g, '').slice(0, 4);
+  input.value = val;
+
+  for (let i = 1; i <= 4; i++) {
+    const box = document.getElementById('pin' + i);
+    if (!box) continue;
+
+    box.classList.remove('filled', 'active');
+
+    if (val[i - 1]) {
+      box.classList.add('filled');
+    }
+
+    if ((val.length === i - 1) || (val.length >= 4 && i === 4)) {
+      box.classList.add('active');
+    }
+  }
+}
+
+function pressPin(num) {
+  const input = document.getElementById('iPw');
+  if (!input) return;
+
+  let val = (input.value || '').replace(/\D/g, '');
+  if (val.length >= 4) return;
+
+  input.value = val + String(num);
+  syncPinBoxes();
+
+  if (input.value.length === 4) {
+    setTimeout(() => chkPw(), 120);
+  }
+}
+
+function backspacePin() {
+  const input = document.getElementById('iPw');
+  if (!input) return;
+
+  let val = (input.value || '').replace(/\D/g, '');
+  input.value = val.slice(0, -1);
+  syncPinBoxes();
+  focusPinInput();
+}
+
+function clearPin() {
+  const input = document.getElementById('iPw');
+  if (!input) return;
+
+  input.value = '';
+  syncPinBoxes();
+  document.getElementById('ePw').textContent = '';
+  focusPinInput();
+}
+
+function handlePinKey(event) {
+  if (event.key === 'Enter') {
+    chkPw();
+    return;
+  }
+
+  if (event.key === 'Backspace') {
+    event.preventDefault();
+    backspacePin();
+    return;
+  }
+
+  if (event.key === 'Delete') {
+    event.preventDefault();
+    clearPin();
+    return;
+  }
+
+  if (/^[0-9]$/.test(event.key)) {
+    event.preventDefault();
+    pressPin(event.key);
+    return;
+  }
+
+  const allowed = ['Tab', 'ArrowLeft', 'ArrowRight'];
+  if (!allowed.includes(event.key)) {
     event.preventDefault();
   }
 }
