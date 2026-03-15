@@ -305,25 +305,6 @@ body.editing .add-inline{display:block}
   <div class="mba"><button class="bc" onclick="cl('mSt')">ยกเลิก</button><button class="bgo" onclick="saveSettings()">บันทึก</button></div>
 </div></div>
 
-<div class="ov" id="mSh"><div class="mb">
-  <h3>📊 เชื่อมต่อ Google Sheets</h3><p class="mdesc">วาง Apps Script Web App URL</p>
-  <label>URL</label><input id="iSh" placeholder="https://script.google.com/macros/s/.../exec">
-  <div class="er" id="eSh"></div>
-  <div class="mba">
-    <button class="bc" onclick="cl('mSh')">ยกเลิก</button>
-    <button class="bu" onclick="pullSheet()">ดึงข้อมูล</button>
-    <button class="bgo" onclick="pushSheet()">บันทึกกลับ</button>
-  </div>
-  <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)">
-    <label>🔗 Link สำหรับเปิดบนมือถือ/เครื่องอื่น</label>
-    <div style="display:flex;gap:6px">
-      <input id="shareLink" readonly style="flex:1;font-size:11px;background:var(--bl);cursor:text" placeholder="กดดึงข้อมูลก่อน...">
-      <button class="bu" style="flex:none;padding:8px 14px;font-size:12px" onclick="copyShareLink()">คัดลอก</button>
-    </div>
-    <p style="font-size:10px;color:var(--ts);margin-top:4px">เปิด link นี้บนมือถือ → ข้อมูลจะโหลดจาก Sheets อัตโนมัติ</p>
-  </div>
-</div></div>
-
 <div class="ov" id="mAb"><div class="mb">
   <h3>➕ เพิ่ม Block</h3><p class="mdesc">เลือกประเภทและหัวข้อ</p>
   <label>ประเภท</label>
@@ -344,10 +325,9 @@ body.editing .add-inline{display:block}
 <div class="ebar">
   <div class="ebl"><div class="dot"></div>โหมดแก้ไข</div>
   <div class="eba">
-    <button class="bb bsh" onclick="op('mSh')">📊 Sheets</button>
     <button class="bb bpl" onclick="op('mAs')">📂 +Tab</button>
     <button class="bb bst" onclick="openSettings()">⚙️ ตั้งค่า</button>
-    <button class="bb bsv" onclick="saveLocal()">💾 บันทึก</button>
+    <button class="bb bsv" onclick="saveToSheet()">💾 บันทึก</button>
     <button class="bb bex" onclick="exitEdit()">✕ ออก</button>
   </div>
 </div>
@@ -368,60 +348,58 @@ body.editing .add-inline{display:block}
 <script>
 let D={},IMGS={},activeTab='',imgTarget=null,API='https://script.google.com/macros/s/AKfycbx7QLgz3vpuDEDGWEH-sACcVm9v-bJlp9nkvrxvauioLCgf-0qHN8uHhFrhCxQo2U4t/exec';
 
-function getApi(){if(API)return API;const p=new URLSearchParams(location.search).get('api');if(p){API=p}return API||''}
+function getApi(){return API}
 function imgUrl(id){return IMGS[id]?IMGS[id].url:''}
 
 // ══ LOAD / SAVE — Sheets Only ══
 async function loadFromSheet(){
-  const url=getApi();if(!url){showSetup();return}
-  try{showLoading('กำลังโหลดข้อมูล...');
-    const r=await fetch(url);const j=await r.json();
+  const url=getApi();
+  try{showLoading('กำลังโหลดข้อมูลจาก Google Sheets...');
+    const r=await fetch(url,{redirect:'follow'});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const j=await r.json();
     if(j.status==='ok'){
       D={};for(const[k,v]of Object.entries(j.data||{}))D[k]=(typeof v==='string')?JSON.parse(v):v;
       IMGS=j.images||{};
       activeTab='';render();
-    }else showSetup(j.message||'โหลดไม่ได้');
-  }catch(e){showSetup(e.message)}
+    }else{showError(j.message||'โหลดข้อมูลไม่ได้')}
+  }catch(e){showError(e.message)}
 }
 
 async function saveToSheet(){
-  const url=getApi();if(!url){toast('❌ ไม่มี API');return}
+  const url=getApi();
   collect();
-  try{toast('☁️ บันทึก...');
-    const r=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'save_all',data:D})});
+  try{toast('☁️ กำลังบันทึก...');
+    const r=await fetch(url,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'save_all',data:D})});
     const j=await r.json();toast(j.status==='ok'?'💾 บันทึกแล้ว':'❌ '+j.message);
   }catch(e){toast('❌ '+e.message)}
 }
 
 async function uploadImage(base64,blockId){
-  const url=getApi();if(!url)throw new Error('ไม่มี API');
+  const url=getApi();
   const id='img_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
   const fn=id+'.jpg';
-  const r=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'upload_image',base64,fileName:fn,image_id:id,block_id:blockId})});
+  const r=await fetch(url,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'upload_image',base64,fileName:fn,image_id:id,block_id:blockId})});
   const j=await r.json();
   if(j.status==='ok'){IMGS[j.image_id]={id:j.image_id,url:j.url};return j.image_id}
   throw new Error(j.message||'Upload failed');
 }
 
 async function deleteImage(imageId){
-  const url=getApi();if(!url)return;
-  fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'delete_image',image_id:imageId})}).catch(()=>{});
+  const url=getApi();
+  fetch(url,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'delete_image',image_id:imageId})}).catch(()=>{});
   delete IMGS[imageId];
 }
 
-// ══ SETUP / LOADING ══
-function showSetup(err){
+// ══ LOADING / ERROR ══
+function showError(msg){
   document.getElementById('mainContent').innerHTML=`<div style="max-width:480px;margin:40px auto;text-align:center;padding:20px">
-    <div style="font-size:48px;margin-bottom:16px">📊</div>
-    <h2 style="font-family:'Mitr',sans-serif;color:var(--f);font-size:20px;margin-bottom:8px">เชื่อมต่อ Google Sheets</h2>
-    <p style="color:var(--ts);font-size:13px;margin-bottom:20px">วาง Apps Script URL เพื่อเริ่มใช้งาน</p>
-    ${err?'<p style="color:var(--red);font-size:12px;margin-bottom:12px">'+esc(err)+'</p>':''}
-    <input id="setupUrl" style="width:100%;padding:12px;border:2px solid var(--bd);border-radius:10px;font-size:13px;margin-bottom:12px" placeholder="https://script.google.com/macros/s/.../exec">
-    <button onclick="connectSheet()" style="width:100%;padding:12px;background:var(--f);color:#fff;border:none;border-radius:10px;font-family:'Mitr',sans-serif;font-size:14px;cursor:pointer">เชื่อมต่อ</button>
-    <p style="color:var(--ts);font-size:11px;margin-top:16px">หรือเปิด URL: <code style="background:var(--bl);padding:2px 6px;border-radius:4px;font-size:10px">?api=YOUR_URL</code></p>
-  </div>`;document.getElementById('navBar').innerHTML='';
+    <div style="font-size:48px;margin-bottom:16px">⚠️</div>
+    <h2 style="font-family:'Mitr',sans-serif;color:var(--red);font-size:18px;margin-bottom:8px">โหลดข้อมูลไม่สำเร็จ</h2>
+    <p style="color:var(--ts);font-size:13px;margin-bottom:20px">${esc(msg)}</p>
+    <button onclick="loadFromSheet()" style="padding:12px 32px;background:var(--f);color:#fff;border:none;border-radius:10px;font-family:'Mitr',sans-serif;font-size:14px;cursor:pointer">ลองใหม่</button>
+  </div>`;
 }
-function connectSheet(){const u=document.getElementById('setupUrl').value.trim();if(!u)return;API=u;history.replaceState(null,'',location.pathname+'?api='+encodeURIComponent(u));loadFromSheet()}
 function showLoading(m){document.getElementById('mainContent').innerHTML=`<div style="text-align:center;padding:60px"><div style="width:40px;height:40px;border:3px solid var(--bd);border-top-color:var(--fl);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px"></div><p style="color:var(--ts)">${esc(m)}</p></div>`;document.getElementById('navBar').innerHTML=''}
 
 // ══ FILE INPUT ══
@@ -499,11 +477,9 @@ function addCheckItem(sk,bi){collect();D[sk].blocks[bi].items.push({label:'',des
 function confirmAddSection(){const tab=document.getElementById('asTab').value.trim()||'หน้าใหม่',icon=document.getElementById('asIcon').value.trim()||'📄',heading=document.getElementById('asHead').value.trim();collect();const mx=secKeys().reduce((m,k)=>Math.max(m,parseInt(k.split('_')[1])||0),0);D['sec_'+(mx+1)]={tab,icon,heading,blocks:[]};cl('mAs');activeTab='sec_'+(mx+1);saveToSheet();render();enableEdit();toast('📂 เพิ่ม "'+tab+'"')}
 function openSettings(){const s=D.settings||{};document.getElementById('sTitle').value=s.title||'';document.getElementById('sSub').value=s.subtitle||'';document.getElementById('sSchool').value=s.school||'';document.getElementById('sPos').value=s.position||'';document.getElementById('sPeriod').value=s.period||'';document.getElementById('sNewPw').value='';op('mSt')}
 function saveSettings(){if(!D.settings)D.settings={};D.settings.title=document.getElementById('sTitle').value;D.settings.subtitle=document.getElementById('sSub').value;D.settings.school=document.getElementById('sSchool').value;D.settings.position=document.getElementById('sPos').value;D.settings.period=document.getElementById('sPeriod').value;const np=document.getElementById('sNewPw').value;if(np)D.settings.password=np;cl('mSt');saveToSheet();renderHero();toast('⚙️ บันทึกแล้ว')}
-async function pullSheet(){const url=document.getElementById('iSh').value.trim();if(!url){document.getElementById('eSh').textContent='กรุณาวาง URL';return}API=url;history.replaceState(null,'',location.pathname+'?api='+encodeURIComponent(url));cl('mSh');loadFromSheet()}
-async function pushSheet(){collect();const url=getApi();if(!url)return;try{document.getElementById('eSh').textContent='บันทึก...';await saveToSheet();cl('mSh')}catch(e){document.getElementById('eSh').textContent=e.message}}
 function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
-function op(id){document.getElementById(id).classList.add('show');if(id==='mPw'){document.getElementById('iPw').value='';document.getElementById('ePw').textContent='';setTimeout(()=>document.getElementById('iPw').focus(),200)}if(id==='mSh'){document.getElementById('iSh').value=getApi();document.getElementById('eSh').textContent=''}}
+function op(id){document.getElementById(id).classList.add('show');if(id==='mPw'){document.getElementById('iPw').value='';document.getElementById('ePw').textContent='';setTimeout(()=>document.getElementById('iPw').focus(),200)}}
 function cl(id){document.getElementById(id).classList.remove('show')}
 </script>
 </body>
